@@ -3,12 +3,11 @@
 \alias{seegSDM}
 \docType{package}
 \title{
-What the package does (short line)
-~~ package title ~~
+Streamlined functions for species distribution modelling, as applied in seeg research group.
 }
 \description{
-More about what it does (maybe more than one line)
-~~ A concise (1-5 lines) description of the package ~~
+The present focus is on ensemble boosted regression tree methods such as those used in Bhatt et al. (2013).
+This will be developed to incorporate other statistical models, methods for selection of pseudo-absence data and other modelling choices.
 }
 \details{
 \tabular{ll}{
@@ -18,23 +17,17 @@ Version: \tab 1.0\cr
 Date: \tab 2013-07-17\cr
 License: \tab What license is it under?\cr
 }
-~~ An overview of how to use the package, including the most important functions ~~
+Functions are provided to assist with the seeg SDM workflow:
+  \begin{enumerate}
+  \item quality control of occurrence and covariate data
+  \item generation of pseudo-absence data
+  \item fitting ensembles of models in parallel
+  \item combining model ensembles to produce final predictions, uncertainty estimates and model summaries
+  \end{enumerate}
 }
 \author{
-Who wrote it
-
-Maintainer: Who to complain to <yourfault@somewhere.net>
-~~ The author and/or maintainer of the package ~~
+Nick Golding, based on functions by Samir Bhatt
 }
 \references{
-~~ Literature or other references for background information ~~
-}
-~~ Optionally other standard keywords, one per line, from file KEYWORDS in the R documentation directory ~~
-\keyword{ package }
-\seealso{
-~~ Optional links to other man pages, e.g. ~~
-~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
-}
-\examples{
-~~ simple examples of the most important functions ~~
+Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{http://dx.doi.org/10.1038/nature12060}
 }

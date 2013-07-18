@@ -8,7 +8,7 @@ This package contains (or at least will contain) a set of streamlined functions 
 
 
 
-References
+# References
 [1]: http://dx.doi.org/10.1038/nature12060
 
 

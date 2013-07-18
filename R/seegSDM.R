@@ -133,3 +133,64 @@ checkOccurrences <- function(occurrences, evidence, evidence_threshold = -100,
   # return corrected occurrences dataframe
   return (occurrences)
 }
+
+
+checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
+  
+  # check whether the raster* object 'rasters' conforms to the 'mask' rasterLayer
+  # By default the extent and projection are compared.
+  # If 'pixelbypixel = TRUE' the pixel values are individually compared with the mask
+  # though this can be very slow & RAM-hungry with large rasters.
+  # the function throws an error if anything is wrong and returns 'rasters' otherwise.
+  
+  if (extent(rasters) != extent(mask)) {
+    stop('extents do not match, see ?extent')
+  }
+  
+  if (projection(rasters) != projection(mask)) {
+    stop('projections do not match, see ?projection')
+  }
+  
+  if (ncell(rasters) != ncell(mask)) {
+    stop('number of cells do not match, see ?ncell')
+  }
+  
+  if (pixelbypixel) {
+    # get the mask pixels and find the nas
+    mask_pixels <- getValues(mask[[1]])
+    mask_nas <- is.na(mask_pixels)
+    
+    # same for rasters
+    rasters_pixels <- getValues(rasters)
+    rasters_nas <- is.na(rasters_pixels)
+    
+    # how many layers in rasters
+    n <- nlayers(rasters)
+    
+    # if rasters is multi-band
+    if (n > 1) {
+      
+      # create an empty vector to store results
+      pixel_mismatch <- vector(length = n)
+      
+      # loop through, checking NAs are in the same place
+      for (i in 1:n) {
+        pixel_mismatch[i] <- any(rasters_nas[, i, drop = TRUE] != mask_nas)
+      }
+      
+      if (any(pixel_mismatch)) {
+        stop(paste0('mismatches between layers ',
+                   names(rasters)[pixel_mismatch],
+                   ', see ?resample')
+      }
+      
+    }
+    
+    if (n == 1 & any(rasters_nas != mask_nas)) {
+      stop('mismatch between layers, see ?resample')
+    }
+    
+  }
+  
+  return (rasters)
+}

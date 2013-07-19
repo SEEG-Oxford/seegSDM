@@ -53,7 +53,7 @@ checkOccurrences <- function(occurrences, evidence, evidence_threshold = -100,
   # do they match up?
   classes_match <- occurrence_classes == expected_classes_ordered
   
-  # if not stop with a helpful error
+  # if not, stop with a helpful error
   if (!all(classes_match)) {
 
     # list problems

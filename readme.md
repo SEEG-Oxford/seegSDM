@@ -1,6 +1,7 @@
 seegSDM
 ===
-#streamlined functions for species distribution modelling in the [seeg research group][1].
+
+# streamlined functions for species distribution modelling in the [seeg research group][1].
 
 
 This package contains (or at least will contain) a set of streamlined functions to fit species distribution models. The current focus is on the ensemble BRT approaches used in the recent [Bhatt et al. dengue paper][2]

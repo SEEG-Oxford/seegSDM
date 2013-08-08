@@ -181,7 +181,7 @@ checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
       if (any(pixel_mismatch)) {
         stop(paste0('mismatches between layers ',
                    names(rasters)[pixel_mismatch],
-                   ', see ?resample')
+                   ', see ?resample'))
       }
       
     }

@@ -33,10 +33,7 @@ evidence consensus for polygons based on point in field, not whole polygon
 
 
 The input occurrence data
-In addition to the dataframe of covariates \code{x} a matrix of corresponding standard deviations, describing the measurement error, may be specified via the \code{error} argument.\cr\cr
-If prior knowledge about the species' ecology is available (e.g. environmental thresholds beyond which the species cannot persist), this may be incorporated into the GRaF model by providing an R function via the \code{prior} argument.\cr\cr
-The smoothness of the fitted random field is controlled by a vector of lengthscales which is used to parameterise a squared exponential covariance function, with one lengthscale for each covariate. \code{graf} centres and standardises covariates before fitting and the lengthscales therefore relate to these scaled covariates.
-Lengthscales can be specified by the user via the the \code{l} argument, roughly approximated by \code{graf} by setting \code{l = NULL} or optimised by setting \code{opt.l = TRUE}.
+
 }
 
 \arguments{
@@ -48,7 +45,7 @@ Lengthscales can be specified by the user via the the \code{l} argument, roughly
 }
 
 \value{
-A \code{graf} object which can be viewed and manipulated using \code{print}, \code{plot} and \code{predict} functions.
+a list or something
 }
 
 \author{
@@ -60,11 +57,10 @@ A \code{graf} object which can be viewed and manipulated using \code{print}, \co
 }
 
 \seealso{
-\code{\link{print.graf}}, \code{\link{plot.graf}}, \code{\link{predict.graf}}, \code{\link{plot3d}}, \code{\link{DIC}}, \code{\link{optim}}.
+\code{\link{print}}
 }
 
 \examples{
-# load Anguilla data from the dismo package
-data(Anguilla_train)
+#
 }
 

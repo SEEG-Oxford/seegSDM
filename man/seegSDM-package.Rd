@@ -18,12 +18,12 @@ Date: \tab 2013-07-17\cr
 License: \tab What license is it under?\cr
 }
 Functions are provided to assist with the seeg SDM workflow:
-  \begin{enumerate}
-  \item quality control of occurrence and covariate data
-  \item generation of pseudo-absence data
-  \item fitting ensembles of models in parallel
-  \item combining model ensembles to produce final predictions, uncertainty estimates and model summaries
-  \end{enumerate}
+\enumerate{
+  \item{quality control of occurrence and covariate data}
+  \item{generation of pseudo-absence data}
+  \item{fitting ensembles of models in parallel}
+  \item{combining model ensembles to produce final predictions, uncertainty estimates and model summaries}
+}
 }
 \author{
 Nick Golding, based on functions by Samir Bhatt

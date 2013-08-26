@@ -640,20 +640,47 @@ extent2poly <- function(ext, proj4string)
   SpatialPolygons(list(poly), proj4string = proj4string)
 }
 
+areaDensity <- function(polys, raster)
+  # get polygon area weighting (in terms of number of pixels covered) on
+  # 0 (max pixels) to 1 (one pixel)  scale
+{
+  areas <- sapply(polys@polygons, function(x) {
+    x@Polygons[[1]]@area
+  }) / prod(res(raster))
+  # set minimum to one pixel
+  areas[areas < 1] <-  1
+  # and scale from 0 to 1
+  areas <- areas - min(areas)
+  areas <- areas / max(areas)
+  1 - (areas / 3)
+}
+
+
+
+
+
+
+
+
+
+
 featureDensity <- function(feature, raster, weights = 1, ...) {
   # Get density of features, masked by raster
   # (points/polys). 'feature' is passed to 'x' and 'raster' to 'y',
   # so these can take any value those can. 'weights' can be a single value,
   # a vector of the correct length, or the name of a field if 'feature'
-  # is a Spatial*DataFrame. If 'maskbyraster = TRUE' the resulting raster
-  # is masked by 'raster'.
-  raster[!is.na(raster[])] <- 0
+  # is a Spatial*DataFrame.
+
+  # set raster values to 0
+  raster <- raster * 0
+  #   raster[!is.na(raster[])] <- 0
+  
   density <- rasterize(feature, raster, field = weights, fun = sum,
                        update = TRUE, ...)
-  density
+  return (density)
 }
 
-gaussWindow <- function (n, sig = n / 5)
+gaussWindow <- function (n, sigma = n / 5)
   # generate a gaussian window for smoothing
   # n = width in cells of window (if even, 1 is added)
 {
@@ -661,7 +688,7 @@ gaussWindow <- function (n, sig = n / 5)
   mat <- matrix(0, n, n)
   centre <- n / 2  + 0.5
   dist <- (col(mat) - centre) ^ 2 + (row(mat) - centre) ^ 2
-  exp(-dist / (2 * sig ^ 2))
+  exp(-dist / (2 * sigma ^ 2))
 }
 
 importRasters <- function(path, as = brick, ext = '.grd')
@@ -697,26 +724,27 @@ wgs84 <- function (projected = FALSE)
   }
 }
 
-percCover <- function(raster1, raster2, points, codes)
+percCover <- function(raster, template, points, codes)
   # given discrete high res (raster1) and low res (raster2) images and points
   # calculate the % cover of each class of raster1 in the cell of raster2
   # identified by points. dropna drops raster2 cells with all na values
 {
-  pointras <- rasterize(points, raster2, mask = TRUE)
+  pointras <- rasterize(points, template, mask = TRUE)
   polys <- pixels2polys(pointras)
-  extr <- extract(raster1, polys)
+  extr <- extract(raster, polys)
   cover <- function(x) sapply(codes, function(i, x) mean(x == i, na.rm = TRUE), x)
   perc <- t(sapply(extr, cover))
   colnames(perc) <- codes
   perc
 }
 
-# weighted standard deviation - export or no?
-sdWeighted <- function (x, w, mn)
+# weighted standard deviation
+sdWeighted <- function (x, weights, weighted_mean)
 {
   n <- length(x)
-  num <- sum(w * (x - mn) ^ 2)
-  denom <- sum(w) * (n - 1) / n
+  if (length(weights != n)) stop('x and weights must have the same length')
+  num <- sum(weights * (x - weighted_mean) ^ 2)
+  denom <- sum(weights) * (n - 1) / n
   sqrt(num / denom)
 }
 

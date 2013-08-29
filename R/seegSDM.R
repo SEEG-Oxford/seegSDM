@@ -614,7 +614,7 @@ os2en <- function (os)
   data.frame(LL = ll, UR = ur, centre = ll + (ur - ll) / 2, resolution = res * ifelse(tet, 0.2, 1))
 }
 
-en2polys <- function (coords)
+en2poly <- function (coords)
 {
   # matrix with columns giving ll.e, ll.n, ur.e, ur.n to SpatialPolygons
   getpoly <- function (x, ID) {
@@ -627,35 +627,39 @@ en2polys <- function (coords)
   SpatialPolygons(lis, proj4string = osgb36())
 }
 
-extent2poly <- function(ext, proj4string)
+
+
+
+
+extent2poly <- function(extent, proj4string)
   # convert an sp or raster extent object to a polygon,
   # given the correct projection
 {
-  coords <- rbind(c(ext@xmin, ext@ymin),
-                  c(ext@xmin, ext@ymax),
-                  c(ext@xmax, ext@ymax),
-                  c(ext@xmax, ext@ymin),
-                  c(ext@xmin, ext@ymin))
+  coords <- rbind(c(extent@xmin, extent@ymin),
+                  c(extent@xmin, extent@ymax),
+                  c(extent@xmax, extent@ymax),
+                  c(extent@xmax, extent@ymin),
+                  c(extent@xmin, extent@ymin))
   poly <- Polygons(list(Polygon(coords)), 1)
   SpatialPolygons(list(poly), proj4string = proj4string)
 }
 
-areaDensity <- function(polys, raster)
-  # get polygon area weighting (in terms of number of pixels covered) on
-  # 0 (max pixels) to 1 (one pixel)  scale
-{
-  areas <- sapply(polys@polygons, function(x) {
-    x@Polygons[[1]]@area
-  }) / prod(res(raster))
-  # set minimum to one pixel
-  areas[areas < 1] <-  1
-  # and scale from 0 to 1
-  areas <- areas - min(areas)
-  areas <- areas / max(areas)
-  1 - (areas / 3)
-}
-
-
+# areaDensity <- function(polygons, raster)
+#   # get polygon area weighting (in terms of number of pixels covered) on
+#   # 0 (max pixels) to 1 (one pixel)  scale
+# {
+#   areas <- sapply(polygons@polygons, function(x) {
+#     x@Polygons[[1]]@area
+#   }) / prod(res(raster))
+#   # set minimum to one pixel
+#   areas[areas < 1] <-  1
+#   # and scale from 0 to 1
+#   areas <- areas - min(areas)
+#   areas <- areas / max(areas)
+#   1 - (areas / 3)
+# }
+# 
+# 
 
 
 

@@ -1,2 +1,2 @@
 exportPattern("^[[:alpha:]]+")
-import(raster, sp, dismo, gtools)
+import(raster, sp, dismo, gtools, rgeos)

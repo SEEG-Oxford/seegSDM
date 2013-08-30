@@ -32,22 +32,17 @@ A matrix with four columns giving (in this order) eastings of the lower-left cor
 }
 
 \value{
-For \code{en2os}:
-  \item{a character vector of alphanumeric OS grid references.}
-For \code{os2en}:
-  \item{a dataframe giving the lower-left and upper right corners and centre of the OS grid square in eastings/northings and the resolution (square side length) in metres.}
-For \code{en2poly}:
-  \item{a \code{\link{SpatialPolygons}} object with a polygon for each grid square.}
+\code{en2os}: a character vector of alphanumeric OS grid references.
 
+\code{os2en}: a dataframe giving the lower-left and upper right corners and centre of the OS grid square in eastings/northings and the resolution (square side length) in metres.
+
+\code{en2poly}: a \code{\link{SpatialPolygons}} object with a polygon for each grid square.
 }
 
 \references{
 Ordnance Survey \url{http://en.wikipedia.org/wiki/Ordnance_Survey}
 'DINTY' tetrads \url{http://en.wikipedia.org/wiki/Tetrad_(area)}
 }
-
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
 \code{\link{osgb36}}

@@ -5,7 +5,7 @@
 Generate a Gaussian window for smoothing rasters.
 }
 \description{
-Create a window (essentially just a matrix) of dimension\code{n} with Gaussian weights (using dispersion parameter \code{sigma}) for use in moving window smoothing (e.g. \code{\link{focal}} from the \code{raster} package).
+Create a window (essentially just a matrix) of dimension\code{n} with Gaussian weights (using dispersion parameter \code{sigma}) for use in moving window smoothing (e.g. \code{\link{focal}} from the \code{raster} package or \code{\link{biasGrid}} from this package).
 }
 \usage{
 gaussWindow(n, sigma = n/5)
@@ -31,7 +31,7 @@ A square matrix of dimension \code{n} (or \code{n + 1}, see above) giving the we
 }
 
 \seealso{
-\code{\link{focal}}
+\code{\link{focal}}, \code{\link{biasGrid}}
 }
 \examples{
 # create a raster

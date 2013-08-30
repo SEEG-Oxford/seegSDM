@@ -7,5 +7,5 @@ Author: Nick Golding
 Maintainer: Nick Golding <nick.golding@zoo.ox.ac.uk>
 Description: The present focus is on ensemble boosted regression tree methods such as those used in Bhatt et al. (2013). This will be developed to incorporate other statistical models, methods for selection of pseudo-absence data and other modelling choices.
 License: GPL(>2)
-Depends: dismo, sp, raster, gtools
-LinkingTo: dismo, sp, raster. gtools
+Depends: dismo, sp, raster, gtools, rgeos
+LinkingTo: dismo, sp, raster. gtools, rgeos

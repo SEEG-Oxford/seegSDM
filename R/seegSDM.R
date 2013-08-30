@@ -389,6 +389,17 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975),
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
 bgSample <- function(raster, n = 1000, prob = FALSE, replace = FALSE, spatial = TRUE)
   # sample N random pixels (not NA) from raster. If 'prob = TRUE' raster is assumed
   # to be a bias grid and points sampled accordingly. If 'sp = TRUE' a
@@ -409,108 +420,107 @@ bgSample <- function(raster, n = 1000, prob = FALSE, replace = FALSE, spatial = 
   }
 }
 
-bgDistance <- function (sp, raster, distance, nbg, ...) {
+bgDistance <- function (n, points, raster, distance, ...) {
   # sample (nbg) background points from within a region within a given distance
   # (distance) of occurrence points (an sp object given by sp). The dots argument
   # can be used to pass options to bgSample. This is waaaay more efficient than
   # anything using gBuffer.
   
-  r <- rasterize(sp@coords, raster)
+  r <- rasterize(points@coords, raster)
   buff <- buffer(r, width = distance) * raster
-  bgSample(buff, n = nbg, ...)
-  
+  bgSample(buff, n = n, ...)
 }
 
-biasGrid <- function(polys, raster, sigma = 30)
+biasGrid <- function(polygons, raster, sigma = 30)
   # create a bias grid from polygons using a gaussian moving window smoother
   # sigma is given in the units of the projection
 {
   ras <- raster
   ras[] <- 0
   # weighted occurrence raster (areas for polys roughly sum to 1)
-  areas <- sapply(polys@polygons, function(x) {
+  areas <- sapply(polygons@polygons, function(x) {
     x@Polygons[[1]]@area
   }) / prod(res(raster))
-  ras <- rasterize(polys, ras, field = 1/areas,
-                   fun = sum, update = T)
+  ras <- rasterize(polygons, ras, field = 1/areas,
+                   fun = sum, update = TRUE)
   # get sigma in pixels
-  sigma <- sigma / mean(res(raster))
+  sigma <- ceiling(sigma / mean(res(raster)))
   # use a window of 5 * sigma
   w <- gaussWindow(sigma * 5, sigma)
-  print(system.time(ras <- focal(ras, w = w / sum(w))))
+  print(system.time(ras <- focal(ras, w = w / sum(w), pad = TRUE, na.rm = TRUE)))
   # replace mask
   ras[is.na(ras[])] <- 0
   mask(ras, raster)
 }
 
-bufferMask <- function(feature, raster, km = 100, val = NULL, maxn = 1000, parallel = FALSE, dissolve = FALSE)
-  # Returns a mask giving the non-NA areas of 'raster' which are within
-  # 'km' kilometres of 'feature'. If val is specified, non-NA values are
-  # assigned val, if null the values in (the first layer of) raster are
-  # used. gBuffer does poorly with very complex feature, so buffering is
-  # carried out in batches of size 'maxn'. If a snowfall cluster is
-  # running, setting 'parallel = TRUE', runs the buffering in parallel. 
-  # Uses rgeos::gBuffer and rgdal::spTransform
-
-  # NOTE: bgDistance is MUCH FASTER & more memory safe for generating pseuco-absences
-  
-  {
-  # if raster is a stack or brick, get the first layer
-  if (nlayers(raster) > 1) raster <- raster[[1]]
-  
-  # convert points to projected latlong
-  if (proj4string(feature) != wgs84(TRUE)@projargs) {
-    feature <- spTransform(feature, CRSobj = wgs84(TRUE))
-  }
-  
-  # buffer by 'km' kilometres, in batches of maxn since gBuffer is slow
-  # for complex features
-  split <- splitIdx(length(feature), maxn)
-  
-  # if a snowfall cluster is running
-  if (parallel) {
-    
-    # export necessary things
-    sfLibrary(rgeos)
-    #    sfExport('feature', 'km')
-    
-    # run in parallel
-    buffers <- sfLapply(split, function(idx) gBuffer(feature[idx[1]:idx[2], ], width = km * 1000))
-    #   buffers <- sfLapply(split, function(idx) gBuffer(feature[idx[1]:idx[2]], width = km * 1000))
-    
-  } else {
-    
-    # otherwise, run sequentially
-    buffers <- lapply(split, function(idx) gBuffer(feature[idx[1]:idx[2], ], width = km * 1000))
-    #   buffers <- lapply(split, function(idx) gBuffer(feature[idx[1]:idx[2]], width = km * 1000))
-    
-  }
-  
-  # recombine these with gUnion if necessary
-  #  if (dissolve) {
-  if (length(buffers) > 1) {
-    buffer <- buffers[[1]]
-    for (i in 2:length(buffers)) {
-      buffer <- gUnion(buffer, buffers[[i]])
-    }
-  } else {
-    buffer <- buffers[[1]]
-  }
-  # }
-  
-  # reproject to CRS of rasterlayer
-  buffer <- spTransform(buffer, CRS(proj4string(raster)))
-  
-  # mask the raster layer (waaay faster than the mask function)
-  buffmask <- raster * rasterize(buffer, raster)
-  
-  # if a val is given, overwrite values
-  if (!is.null(val)) {
-    buffmask[which(!is.na(buffmask[]))] <- val
-  }
-  
-  buffmask
-}
+# bufferMask <- function(feature, raster, km = 100, val = NULL, maxn = 1000, parallel = FALSE, dissolve = FALSE)
+#   # Returns a mask giving the non-NA areas of 'raster' which are within
+#   # 'km' kilometres of 'feature'. If val is specified, non-NA values are
+#   # assigned val, if null the values in (the first layer of) raster are
+#   # used. gBuffer does poorly with very complex feature, so buffering is
+#   # carried out in batches of size 'maxn'. If a snowfall cluster is
+#   # running, setting 'parallel = TRUE', runs the buffering in parallel. 
+#   # Uses rgeos::gBuffer and rgdal::spTransform
+# 
+#   # NOTE: bgDistance is MUCH FASTER & more memory safe for generating pseuco-absences
+#   
+#   {
+#   # if raster is a stack or brick, get the first layer
+#   if (nlayers(raster) > 1) raster <- raster[[1]]
+#   
+#   # convert points to projected latlong
+#   if (proj4string(feature) != wgs84(TRUE)@projargs) {
+#     feature <- spTransform(feature, CRSobj = wgs84(TRUE))
+#   }
+#   
+#   # buffer by 'km' kilometres, in batches of maxn since gBuffer is slow
+#   # for complex features
+#   split <- splitIdx(length(feature), maxn)
+#   
+#   # if a snowfall cluster is running
+#   if (parallel) {
+#     
+#     # export necessary things
+#     sfLibrary(rgeos)
+#     #    sfExport('feature', 'km')
+#     
+#     # run in parallel
+#     buffers <- sfLapply(split, function(idx) gBuffer(feature[idx[1]:idx[2], ], width = km * 1000))
+#     #   buffers <- sfLapply(split, function(idx) gBuffer(feature[idx[1]:idx[2]], width = km * 1000))
+#     
+#   } else {
+#     
+#     # otherwise, run sequentially
+#     buffers <- lapply(split, function(idx) gBuffer(feature[idx[1]:idx[2], ], width = km * 1000))
+#     #   buffers <- lapply(split, function(idx) gBuffer(feature[idx[1]:idx[2]], width = km * 1000))
+#     
+#   }
+#   
+#   # recombine these with gUnion if necessary
+#   #  if (dissolve) {
+#   if (length(buffers) > 1) {
+#     buffer <- buffers[[1]]
+#     for (i in 2:length(buffers)) {
+#       buffer <- gUnion(buffer, buffers[[i]])
+#     }
+#   } else {
+#     buffer <- buffers[[1]]
+#   }
+#   # }
+#   
+#   # reproject to CRS of rasterlayer
+#   buffer <- spTransform(buffer, CRS(proj4string(raster)))
+#   
+#   # mask the raster layer (waaay faster than the mask function)
+#   buffmask <- raster * rasterize(buffer, raster)
+#   
+#   # if a val is given, overwrite values
+#   if (!is.null(val)) {
+#     buffmask[which(!is.na(buffmask[]))] <- val
+#   }
+#   
+#   buffmask
+# }
 
 buildSP <- function (files)
   # given a character vector of ESRI shapefiles (.shp)
@@ -522,27 +532,28 @@ buildSP <- function (files)
   SpatialPolygons(polylis, proj4string = shps[[1]]@proj4string)
 }
 
-centre2poly <- function(centre, res)
-  # given pixels centres and raster resolution,
-  # return SpatialPolygons for the pixels
-{
-  ldru <- rep(centre, 2) + c(-res, res)/2
-  Polygon(rbind(ldru[1:2], # ld
-                ldru[c(1, 4)], # lu
-                ldru[c(3, 4)], # ru
-                ldru[c(3, 2)], # rd
-                ldru[1:2])) # ld
-}
-
-pixels2polys <- function(raster)
-  # turn all non-na pixels into polys - don't run on a big file!
-{
-  centre <- xyFromCell(raster, which(!is.na(raster[])))
-  polys <- apply(centre, 1, centre2poly, res(raster))
-  polys <- lapply(polys, function(x) Polygons(list(x), 1))
-  for(i in 1:length(polys)) polys[[i]]@ID <- as.character(i)
-  SpatialPolygons(polys, proj4string = raster@crs)
-}
+# centre2poly <- function(centre, res)
+#   # given pixels centres and raster resolution,
+#   # return SpatialPolygons for the pixels
+# {
+#   ldru <- rep(centre, 2) + c(-res, res)/2
+#   Polygon(rbind(ldru[1:2], # ld
+#                 ldru[c(1, 4)], # lu
+#                 ldru[c(3, 4)], # ru
+#                 ldru[c(3, 2)], # rd
+#                 ldru[1:2])) # ld
+# }
+# 
+# pixels2polys <- function(raster)
+#   # turn all non-na pixels into polys - don't run on a big file!
+# {
+#   centre <- xyFromCell(raster, which(!is.na(raster[])))
+#   polys <- apply(centre, 1, centre2poly, res(raster))
+#   polys <- lapply(polys, function(x) Polygons(list(x), 1))
+#   for(i in 1:length(polys)) polys[[i]]@ID <- as.character(i)
+#   SpatialPolygons(polys, proj4string = raster@crs)
+# }
+# 
 
 
 en2os <- function (en)
@@ -627,10 +638,6 @@ en2poly <- function (coords)
   SpatialPolygons(lis, proj4string = osgb36())
 }
 
-
-
-
-
 extent2poly <- function(extent, proj4string)
   # convert an sp or raster extent object to a polygon,
   # given the correct projection
@@ -660,13 +667,6 @@ extent2poly <- function(extent, proj4string)
 # }
 # 
 # 
-
-
-
-
-
-
-
 
 featureDensity <- function(feature, raster, weights = 1, ...) {
   # Get density of features, masked by raster

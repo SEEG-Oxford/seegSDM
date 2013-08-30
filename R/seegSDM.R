@@ -198,14 +198,14 @@ checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
 
 
 
-runBRT <- function (data, gbm.x, gbm.y, pred.raster, verbose = FALSE,
-                    tree.complexity = 4, learning.rate = 0.005,
-                    bag.fraction = 0.75, n.trees = 10, family = 'bernoulli',
-                    n.folds = 10, max.trees = 40000, step.size = 10,
+runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     wt.fun = function(PA) ifelse(PA == 1,
                                                  1,
-                                                 4 * sum(PA) / sum(1 - PA)),
-                    max_tries = 5, ...)
+                                                 sum(PA) / sum(1 - PA)),
+                    max_tries = 5, verbose = FALSE,
+                    tree.complexity = 4, learning.rate = 0.005,
+                    bag.fraction = 0.75, n.trees = 10,
+                    n.folds = 10, max.trees = 40000, step.size = 10, ...)
   # wrapper to run a BRT model with Sam's defaults & a default 50:50 PA weighting
   # and return covariate effects, relative influence,
   # and a prediction map (on the probability scale).
@@ -230,7 +230,6 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster, verbose = FALSE,
                   learning.rate = learning.rate,
                   bag.fraction = bag.fraction,
                   n.trees = n.trees,
-                  family = family,
                   max.trees = max.trees,
                   plot.main = FALSE,
                   site.weights = wt.fun(data[, gbm.y]),
@@ -242,9 +241,9 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster, verbose = FALSE,
   
   # throw an error if it still hasn't worked after max_tries
   if (tries >= max_tries) {
-    stop (paste('stopped after',
+    stop (paste('Unexpected item in the bagging area!\nStopped after',
                 max_tries,
-                'attempts, reduce step.size or learning rate'))
+                'attempts, try reducing the step.size or learning rate'))
   }
     
   
@@ -254,6 +253,14 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster, verbose = FALSE,
        relinf = summary(m, plotit = FALSE),
        pred = predict(pred.raster, m, type = 'response', n.trees = m$n.trees))
 }
+
+
+
+
+
+
+
+
 
 
 getRelInf <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), ...)
@@ -307,35 +314,8 @@ getEffectPlots <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), .
   return(effects)
 }
 
-
-
-rmse <- function(pred, p)
-  # root mean squared error of prediction from true probability
-{
-  sqrt(mean(abs(p - pred) ^ 2))
-}
-
-devBern <- function (y, p)
-  # predictive deviance from a bernoulli distribution
-{
-  -2 * sum(dbinom(y, 1, p, log = TRUE))
-}
-
-
-subsample <- function (data, n, minimum = c(5, 5), prescol = 1, replace = FALSE) {
-  # get a random subset of 'n' records from 'data', ensuring that there
-  # are at least 'minimum[1]' presences and 'minimum[2]' absences.
-  # assumes by default that presence/absence code is in column 1 ('prescol')
-  OK <- FALSE
-  while (!OK) {
-    sub <- data[sample(1:nrow(data), n, replace = replace), ]
-    if (sum(sub[, prescol]) > minimum[1] & sum(1 - sub[, prescol]) > minimum[2]) OK <- TRUE
-  }
-  sub
-}
-
 combinePreds <- function (preds, quantiles = c(0.025, 0.975),
-                          parallel = FALSE, maxn = 1000)
+                          parallel = FALSE, maxn = NULL)
   # function to calculate means and quantiles for each cell, given a rasterBrick
   # or rasterStack where each layer is a single ensemble prediction.
   # If a snowfall cluster is running, 'parallel = TRUE' sets the function to run
@@ -388,17 +368,37 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975),
   ans
 }
 
+rmse <- function(truth, prediction)
+  # root mean squared error of prediction from true probability
+{
+  sqrt(mean(abs(prediction - truth) ^ 2))
+}
 
+devBern <- function (truth, prediction)
+  # predictive deviance from a bernoulli distribution
+{
+  -2 * sum(dbinom(truth, 1, prediction, log = TRUE))
+}
 
-
-
-
-
-
-
-
-
-
+subsample <- function (data, n, minimum = c(5, 5), prescol = 1, replace = FALSE) {
+  # get a random subset of 'n' records from 'data', ensuring that there
+  # are at least 'minimum[1]' presences and 'minimum[2]' absences.
+  # assumes by default that presence/absence code is in column 1 ('prescol')
+  OK <- FALSE
+  # until criteria are met
+  while (!OK) {
+    # take a subsample
+    sub <- data[sample(1:nrow(data), n, replace = replace), ]
+    # count presences and absences
+    npres <- sum(sub[, prescol]) 
+    nabs <- sum(1 - sub[, prescol])
+    # if they are greater than or equal to the minimum, criteria are met
+    if (npres >= minimum[1] & nabs >= minimum[2]) {
+      OK <- TRUE
+    }
+  }
+  return (sub)
+}
 
 bgSample <- function(raster, n = 1000, prob = FALSE, replace = FALSE, spatial = TRUE)
   # sample N random pixels (not NA) from raster. If 'prob = TRUE' raster is assumed
@@ -734,7 +734,8 @@ percCover <- function(raster, template, points, codes)
   # identified by points. dropna drops raster2 cells with all na values
 {
   pointras <- rasterize(points, template, mask = TRUE)
-  polys <- pixels2polys(pointras)
+#   polys <- pixels2polys(pointras)
+  polys <- rasterToPolygons(pointras)
   extr <- extract(raster, polys)
   cover <- function(x) sapply(codes, function(i, x) mean(x == i, na.rm = TRUE), x)
   perc <- t(sapply(extr, cover))
@@ -746,7 +747,7 @@ percCover <- function(raster, template, points, codes)
 sdWeighted <- function (x, weights, weighted_mean)
 {
   n <- length(x)
-  if (length(weights != n)) stop('x and weights must have the same length')
+  if (length(weights) != n) stop('x and weights must have the same length')
   num <- sum(weights * (x - weighted_mean) ^ 2)
   denom <- sum(weights) * (n - 1) / n
   sqrt(num / denom)

@@ -5,7 +5,7 @@
 Create a raster of the density of points and polygons
 }
 \description{
-Given a feature object (\code{feature}) and a template raster (\code{raster}), create a raster giving the density of features at each cell. The density of polygons can be split accross multiple cells be providing a vector of weights (perhaps calculated using \code{\link{areaDensity}}) via the \code{weights} argument. This is essentially a wrapper to \code{\link{rasterize}} in the \code{raster} package.
+Given a feature object (\code{feature}) and a template raster (\code{raster}), create a raster giving the density of features at each cell. The density of polygons can be split accross multiple cells be providing a vector of weights via the \code{weights} argument. This is essentially a wrapper to \code{\link{rasterize}} in the \code{raster} package.
 }
 \usage{
 featureDensity(feature, raster, weights = 1, ...)
@@ -31,7 +31,7 @@ A raster object with the same dimension and resolution as \code{raster} giving t
 }
 
 \seealso{
-\code{\link{rasterize}}, \code{\link{areaDensity}}
+\code{\link{rasterize}}
 }
 \examples{
 #

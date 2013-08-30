@@ -10,7 +10,7 @@ Given a numeric vector (\code{x}), the corresponding vector of weights (\code{we
 \usage{
 sdWeighted(x, weights, weighted_mean)
 }
-%- maybe also 'usage' for other objects documented here.
+
 \arguments{
   \item{x}{
 The numeric vector for which the weighted standard deviation is to be calculated.
@@ -22,9 +22,7 @@ The numeric vector for which the weighted standard deviation is to be calculated
   The weighted mean of \code{x}, perhaps calculated using \code{\link{weighted.mean}}.
 }
 }
-\details{
-  
-}
+
 \value{
   A numeric vector of length 1 giving the weightyed mean of \code{x}.
 }

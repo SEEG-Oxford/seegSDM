@@ -23,7 +23,7 @@ The structure is:
 First we load in some occurrence data. Here we'll use fake occurrence data from a csv file on the seegSDM github page.
 
 ```{r}
-occ <- read.csv
+summary(cars)
 ```
 
 ### <a id="quality"></a>Quality control

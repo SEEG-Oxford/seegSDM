@@ -41,21 +41,28 @@ projection(template) <- wgs84()
 
 n_covs <- 3
 # make n_covs more random rasters, masked by template
-rasters <- lapply(1:n_covs, function(i) genRaster(mask = template))
+covs <- brick(lapply(1:n_covs, function(i) genRaster(mask = template)))
 
-# save these as tiffs
-lapply(1:n_covs, function(i) {
-  writeRaster(rasters[[i]],
-              filename = paste0('cov_', letters[i]),
-              format = 'GTiff',
-              overwrite = TRUE)
-})
+# fix their names
+names(covs) <- paste0('cov_', letters[1:n_covs])
+names(template) <- 'template'
 
-# save the template layer too
-writeRaster(template,
-            filename = 'template',
-            format = 'GTiff',
-            overwrite = TRUE)
+# save as RData objects in the data folder
+save(covs, file = 'covs.RData')
+save(template, file = 'template.RData')
+
+# # save these as tiffs
+# lapply(1:n_covs, function(i) {
+#   writeRaster(rasters[[i]],
+#               filename = paste0('cov_', letters[i]),
+#               format = 'GTiff',
+#               overwrite = TRUE)
+# })
+# # save the template layer too
+# writeRaster(template,
+#             filename = 'template',
+#             format = 'GTiff',
+#             overwrite = TRUE)
 
 
 # ~~~~~~~~~~~~~~~~
@@ -81,15 +88,11 @@ f <- function (covs) {
   return(pnorm(0.3 * z))
 }
 
-# make the rasters a brick with correct names
-b <- brick(rasters)
-names(b) <- paste0('cov_', letters[1:n_covs])
-
 # generate a surface of probability of presence
 # create a blank raster
 prob <- template
 # fill it with probabilities
-prob[] <- f(as.data.frame(getValues(b)))
+prob[] <- f(as.data.frame(getValues(covs)))
 
 # plot(prob)
 
@@ -99,12 +102,14 @@ n_eval <- 500
 # sample randomly to get an evaluation set of n_eval
 eval_pts <- bgSample(prob, n_eval, spatial = FALSE)
 PA <- rbinom(n_eval, 1, extract(prob, eval_pts))
-eval_pts <- cbind(PA = PA, eval_pts)
+evaluation <- cbind(PA = PA, eval_pts)
 
-# write these out
-write.csv(eval_pts,
-          file = 'evaluation.csv',
-          row.names= FALSE)
+# save this as an RData file
+save(evaluation, file = 'evaluation.RData')
+# # write these out
+# write.csv(eval_pts,
+#           file = 'evaluation.csv',
+#           row.names= FALSE)
 
 # plot these
 # points(eval_pts[, 2:3], pch = ifelse(eval_pts[, 1], 16, 21))
@@ -118,9 +123,11 @@ observation <- prob * bias
 
 # number of occurrence points
 n_occ <- 100
-occ_pts <- bgSample(observation, n_occ, prob = TRUE, spatial = FALSE)
+occurrence <- bgSample(observation, n_occ, prob = TRUE, spatial = FALSE)
 
-write.csv(occ_pts,
-          file = 'occurrence.csv',
-          row.names= FALSE)
+# save as an RData file
+save(occurrence, file = 'occurrence.RData')
+# write.csv(occ_pts,
+#           file = 'occurrence.csv',
+#           row.names= FALSE)
 

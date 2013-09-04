@@ -32,7 +32,7 @@ You can report bugs, issues and suggestions for extra functions using the issues
 
 ### Tutorial
 
-I should probably write one of these at some point ...
+There is the beginnings of a tutorial/example workflow for the package [here](https://rawgithub.com/SEEG-Oxford/seegSDM/master/seegSDM_tutorial.html)
 
 
 [1]: http://simonhay.zoo.ox.ac.uk/staff.php

@@ -245,7 +245,8 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
   
   # otherwise return the list of model objects
   # (predict grids, relative influence stats and prediction map)
-  list(effects = lapply(1:length(gbm.x), function(i) plot(m, i, return.grid = TRUE)),
+  list(model = m,
+       effects = lapply(1:length(gbm.x), function(i) plot(m, i, return.grid = TRUE)),
        relinf = summary(m, plotit = FALSE),
        pred = predict(pred.raster, m, type = 'response', n.trees = m$n.trees))
 }

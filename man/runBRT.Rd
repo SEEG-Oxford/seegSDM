@@ -65,7 +65,8 @@ Additional functions to pass to \code{gbm.step}.
 }
 
 \value{
-A list containing three elements
+A list containing four elements
+  \item{model }{the fitted gbm model}
   \item{effects }{a list of effect curves with one element ofr each covariate}
   \item{relinf }{a vector of relative influence estimates for each covariate}
   \item{pred }{a \code{RasterLayer} giving predictions on the probability scale.}

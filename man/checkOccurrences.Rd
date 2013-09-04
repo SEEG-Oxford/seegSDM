@@ -15,10 +15,7 @@ Given a dataframe \code{occurrence} of occurrence records and a \code{RasterLaye
   \item{checks for points outside the mask. If found, they will be moved to the nearest pixel inside the mask, provided it is no more than two pixels away. If this isn't possible the record is removed.}
 }
 
-If the occurrence data fails any checks outright (ie. stages 1:2), the function will stop and throw an error message.
-  Otherwise the cleaned and corrected occurrence dataframe will be returned.
-  
-  \code{evidence} is assumed to conform to the mastergrid template. It may be worth checking this using \code{\link{checkRasters}} first.
+If the occurrence data fails any checks outright (ie. stages 1:2), the function will stop and throw an error message. Otherwise the cleaned and corrected occurrence dataframe will be returned. \code{evidence} is assumed to conform to the mastergrid template. It may be worth checking this using \code{\link{checkRasters}} first.
   }
 
 \usage{
@@ -28,11 +25,11 @@ checkOccurrences(occurrences, evidence, evidence_threshold = -100,
 
 \details{
 
+TO DO:
+
 expected fields and datatypes
 
-
 evidence consensus for polygons based on point in field, not whole polygon
-
 
 The input occurrence data
 
@@ -50,16 +47,8 @@ The input occurrence data
 a list or something
 }
 
-\author{
-  Nick Golding, based on functions by Samir Bhatt
-}
-
-\references{
-  Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{http://dx.doi.org/10.1038/nature12060}
-}
-
 \seealso{
-\code{\link{print}}
+\code{\link{checkRasters}}
 }
 
 \examples{

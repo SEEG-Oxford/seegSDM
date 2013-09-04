@@ -1,0 +1,63 @@
+Example workflow / tutorial for the seegSDM package
+========================================================
+
+This document runs through a typical workflow for distribution modelling using the ```seegSDM``` package.
+
+It will include importing and checking data, running BRT ensembles in parallel and examining the fitted models.
+This is a work in progress, so sorry if it stops halfway through or doesn't make any sense yet! Please report any issues via the [issues reporting system](https://github.com/SEEG-Oxford/seegSDM/issues).
+
+The structure is:
+
+##### [Loading data](#load)
+##### [Quality control](#quality)
+##### [Generating pseudo-absences](#pseudo)
+##### [Running a single BRT model](#BRT)
+##### [Running a BRT ensemble in parallel](#ensemble)
+##### [Visualising the BRT ensemble](#vis)
+##### [Outputting the results](#output)
+
+
+
+### <a id="load"></a>Loading data
+
+First we load in some occurrence data. Here we'll use fake occurrence data from a csv file on the seegSDM github page.
+
+```{r}
+occ <- read.csv
+```
+
+### <a id="quality"></a>Quality control
+
+```{r}
+summary(cars)
+```
+
+### <a id="pseudo"></a>Generating pseudo-absences
+
+```{r}
+summary(cars)
+```
+
+### <a id="BRT"></a>Running a single BRT model 
+
+```{r}
+summary(cars)
+```
+
+### <a id="ensemble"></a>Running a BRT ensemble in parallel
+
+```{r}
+summary(cars)
+```
+
+### <a id="vis"></a>Visualising the BRT ensemble
+
+```{r}
+summary(cars)
+```
+### <a id="output"></a>Outputting the results
+
+```{r}
+summary(cars)
+```
+

@@ -26,8 +26,31 @@ Functions are provided to assist with the seeg SDM workflow:
 }
 }
 \author{
-Nick Golding, based on functions by Samir Bhatt
+Nick Golding, with some functions based on code by Samir Bhatt
 }
 \references{
 Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{http://dx.doi.org/10.1038/nature12060}
+}
+
+\seealso{
+Functions for manipulating rasters and shapefiles:
+
+\code{\link{biasGrid}}, \code{\link{featureDensity}}, \code{\link{gaussWindow}}, \code{\link{osgb36}}, \code{\link{wgs84}}, \code{\link{Eastings/Northings}}, \code{\link{extent2poly}}, \code{\link{importRasters}}, \code{\link{maxExtent}}, \code{\link{percCover}}, \code{\link{buildSP}}
+
+Functions for generating pseudo-absences:
+
+\code{\link{bgDistance}}, \code{\link{bgSample}}
+
+Functions for running and assessing BRT ensembles:
+
+\code{\link{runBRT}}, \code{\link{getEffectPlots}}, \code{\link{getRelInf}}, \code{\link{combinePreds}}
+
+Functions for quality control:
+
+\code{\link{checkOccurrences}}, \code{\link{checkRasters}}
+ 
+Miscellaneous functions:
+
+\code{\link{accuracy statistics}}, \code{\link{sdWeighted}}, \code{\link{splitIdx}}, \code{\link{subsample}}
+
 }

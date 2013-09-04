@@ -134,31 +134,30 @@ checkOccurrences <- function(occurrences, evidence, evidence_threshold = -100,
   return (occurrences)
 }
 
-
-checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
+checkRasters <- function (rasters, template, cellbycell = FALSE) {
   
-  # check whether the raster* object 'rasters' conforms to the 'mask' rasterLayer
+  # check whether the raster* object 'rasters' conforms to the 'template' rasterLayer
   # By default the extent and projection are compared.
-  # If 'pixelbypixel = TRUE' the pixel values are individually compared with the mask
+  # If 'cellbycell = TRUE' the pixel values are individually compared with the template
   # though this can be very slow & RAM-hungry with large rasters.
   # the function throws an error if anything is wrong and returns 'rasters' otherwise.
   
-  if (extent(rasters) != extent(mask)) {
+  if (extent(rasters) != extent(template)) {
     stop('extents do not match, see ?extent')
   }
   
-  if (projection(rasters) != projection(mask)) {
+  if (projection(rasters) != projection(template)) {
     stop('projections do not match, see ?projection')
   }
   
-  if (ncell(rasters) != ncell(mask)) {
+  if (ncell(rasters) != ncell(template)) {
     stop('number of cells do not match, see ?ncell')
   }
   
-  if (pixelbypixel) {
-    # get the mask pixels and find the nas
-    mask_pixels <- getValues(mask[[1]])
-    mask_nas <- is.na(mask_pixels)
+  if (cellbycell) {
+    # get the template pixels and find the nas
+    template_pixels <- getValues(template[[1]])
+    template_nas <- is.na(template_pixels)
     
     # same for rasters
     rasters_pixels <- getValues(rasters)
@@ -175,7 +174,7 @@ checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
       
       # loop through, checking NAs are in the same place
       for (i in 1:n) {
-        pixel_mismatch[i] <- any(rasters_nas[, i, drop = TRUE] != mask_nas)
+        pixel_mismatch[i] <- any(rasters_nas[, i, drop = TRUE] != template_nas)
       }
       
       if (any(pixel_mismatch)) {
@@ -186,7 +185,7 @@ checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
       
     }
     
-    if (n == 1 & any(rasters_nas != mask_nas)) {
+    if (n == 1 & any(rasters_nas != template_nas)) {
       stop('mismatch between layers, see ?resample')
     }
     
@@ -194,9 +193,6 @@ checkRasters <- function (rasters, mask, pixelbypixel = FALSE) {
   
   return (rasters)
 }
-
-
-
 
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     wt.fun = function(PA) ifelse(PA == 1,
@@ -253,15 +249,6 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
        relinf = summary(m, plotit = FALSE),
        pred = predict(pred.raster, m, type = 'response', n.trees = m$n.trees))
 }
-
-
-
-
-
-
-
-
-
 
 getRelInf <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), ...)
   # given a list of BRT model bootstraps (each an output from runBRT)

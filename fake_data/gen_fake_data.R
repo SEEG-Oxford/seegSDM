@@ -37,33 +37,23 @@ template <- template * 0
 
 # set the extent and projections
 extent(template) <- c(-10, 10, -5, 15)
-projection(template) <- wgs84()
+projection(template) <- wgs84(TRUE)
 
+# generate covariate rasters
 n_covs <- 3
 # make n_covs more random rasters, masked by template
-covs <- brick(lapply(1:n_covs, function(i) genRaster(mask = template)))
+covariates <- brick(lapply(1:n_covs, function(i) genRaster(mask = template)))
+# make the last one discrete
+covariates[[n_covs]][] <- round(covariates[[n_covs]][] * 5)
+
 
 # fix their names
-names(covs) <- paste0('cov_', letters[1:n_covs])
+names(covariates) <- paste0('cov_', letters[1:n_covs])
 names(template) <- 'template'
 
 # save as RData objects in the data folder
-save(covs, file = 'covs.RData')
 save(template, file = 'template.RData')
-
-# # save these as tiffs
-# lapply(1:n_covs, function(i) {
-#   writeRaster(rasters[[i]],
-#               filename = paste0('cov_', letters[i]),
-#               format = 'GTiff',
-#               overwrite = TRUE)
-# })
-# # save the template layer too
-# writeRaster(template,
-#             filename = 'template',
-#             format = 'GTiff',
-#             overwrite = TRUE)
-
+save(covariates, file = 'covariates.RData')
 
 # ~~~~~~~~~~~~~~~~
 # simulating a fake species / disease
@@ -80,24 +70,39 @@ f <- function (covs) {
     # a double sin curve effect of cov_b
     sin(covs$cov_b) + sin(covs$cov_b * 2) +
     # a threshold * log effect of cov_c
-    ifelse(covs$cov_c > 0.2, 1, -1) * exp(2 * covs$cov_c) +
+    ifelse(covs$cov_c > -1, 1, -1) * exp(covs$cov_c) +
     # some additional random noise (on top of likelihood
     # just to be extra mean)
     rnorm(nrow(covs))
   # use the probit link to return probability scale (flattened a little)
-  return(pnorm(0.3 * z))
+  return(pnorm(0.1 * z))
 }
 
 # generate a surface of probability of presence
 # create a blank raster
 prob <- template
 # fill it with probabilities
-prob[] <- f(as.data.frame(getValues(covs)))
+prob[] <- f(as.data.frame(getValues(covariates)))
 
-# plot(prob)
+# create a fake evidence consensus layer from probabilities
+# grids of 25 by 25 cells, 4th root to remove spike in one cell
+consensus <- aggregate(prob ^ (1 / 4), 25)
+
+# scale to (0, 1)
+consensus <- consensus - min(consensus[], na.rm = TRUE)
+consensus <- consensus / max(consensus[], na.rm = TRUE)
+
+# then  to (-100, 100)
+consensus <- consensus * 200 - 100
+
+# disaggregate back to same resolution and remask
+consensus <- disaggregate(consensus, 25)
+consensus <- mask(consensus, template)
+
+# save
+save(consensus, file = 'consensus.RData')
 
 n_eval <- 500
-
 
 # sample randomly to get an evaluation set of n_eval
 eval_pts <- bgSample(prob, n_eval, spatial = FALSE)
@@ -106,13 +111,6 @@ evaluation <- cbind(PA = PA, eval_pts)
 
 # save this as an RData file
 save(evaluation, file = 'evaluation.RData')
-# # write these out
-# write.csv(eval_pts,
-#           file = 'evaluation.csv',
-#           row.names= FALSE)
-
-# plot these
-# points(eval_pts[, 2:3], pch = ifelse(eval_pts[, 1], 16, 21))
 
 # generate an observation bias grid, sharpened on probability level
 bias <- genRaster(mask = template)
@@ -127,7 +125,3 @@ occurrence <- bgSample(observation, n_occ, prob = TRUE, spatial = FALSE)
 
 # save as an RData file
 save(occurrence, file = 'occurrence.RData')
-# write.csv(occ_pts,
-#           file = 'occurrence.csv',
-#           row.names= FALSE)
-

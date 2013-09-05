@@ -14,7 +14,7 @@ combinePreds(preds, quantiles = c(0.025, 0.975), parallel = FALSE, maxn = NULL)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{preds}{
-A \code{\link{RasterBrick}} or \code{\link{RasterStack}} object, where each layer is a single prediction.
+A \code{RasterBrick} or \code{RasterStack} object, where each layer is a single prediction.
 }
   \item{quantiles}{
 A vector of length two giving the quantiles of the prediciton distribution to return.
@@ -32,7 +32,7 @@ A three layer \code{RasterBrick} or \code{RasterStack} object (whichever \code{p
 }
 
 \seealso{
-\code{\link{RasterBrick}}, \code{\link{RasterStack}}, \code{\link{splitIdx}}, \code{\link{quantile}}, \code{\link{snowfall}}
+\code{RasterBrick}, \code{RasterStack}, \code{\link{splitIdx}}, \code{\link{quantile}}, \code{\link{snowfall}}
 }
 \examples{
 # load a test raster

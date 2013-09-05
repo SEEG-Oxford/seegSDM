@@ -13,10 +13,10 @@ install.packages('devtools')
 library(devtools)
 ```
 
-Then use the `install_github` function
+Then use the `install_github` function, also installing packages that seegSDM depends on
 
 ```
-install_github('seegSDM', 'SEEG-Oxford')
+install_github('seegSDM', 'SEEG-Oxford', dependencies = 'Depends')
 ```
 
 and load the package and you're ready to go

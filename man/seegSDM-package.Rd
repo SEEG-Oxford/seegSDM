@@ -35,7 +35,7 @@ Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{h
 \seealso{
 Functions for manipulating rasters and shapefiles:
 
-\code{\link{biasGrid}}, \code{\link{featureDensity}}, \code{\link{gaussWindow}}, \code{\link{osgb36}}, \code{\link{wgs84}}, \code{\link{Eastings/Northings}}, \code{\link{extent2poly}}, \code{\link{importRasters}}, \code{\link{maxExtent}}, \code{\link{percCover}}, \code{\link{buildSP}}
+\code{\link{biasGrid}}, \code{\link{featureDensity}}, \code{\link{gaussWindow}}, \code{\link{osgb36}}, \code{\link{wgs84}}, \code{\link{en2os}}, \code{\link{extent2poly}}, \code{\link{importRasters}}, \code{\link{maxExtent}}, \code{\link{percCover}}, \code{\link{buildSP}}
 
 Functions for generating pseudo-absences:
 
@@ -51,6 +51,6 @@ Functions for quality control:
  
 Miscellaneous functions:
 
-\code{\link{accuracy statistics}}, \code{\link{sdWeighted}}, \code{\link{splitIdx}}, \code{\link{subsample}}
+\code{\link{rmse}} \code{\link{sdWeighted}}, \code{\link{splitIdx}}, \code{\link{subsample}}
 
 }

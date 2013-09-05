@@ -32,7 +32,9 @@ To install seegSDM straight from github we use the ```install_github``` function
 library(devtools)
 
 # use install_github to install seegSDM, giving the name of repo & owner
-# install_github('seegSDM', 'SEEG-Oxford')
+# and installing all the packages it depends on
+
+# install_github('seegSDM', 'SEEG-Oxford', dependencies = 'Depends')
 
 # seegSDM should now be installed, so we just need to load it
 library(seegSDM)
@@ -53,13 +55,13 @@ head(occurrence)
 ```
 
 ```
-##         x   y
-## [1,] -2.5 5.3
-## [2,] -9.5 4.1
-## [3,] -8.3 5.5
-## [4,] -9.3 0.5
-## [5,] -8.1 0.5
-## [6,] -8.3 2.1
+##         x    y
+## [1,]  4.1 -0.1
+## [2,] -9.1  8.9
+## [3,] -7.7  4.9
+## [4,] -9.5  7.5
+## [5,] -7.9 -2.1
+## [6,] -7.9  0.9
 ```
 
 
@@ -68,8 +70,8 @@ Most of the ```seegSDM``` functions use ```SpatialPoints``` objects (from the ``
 
 ```r
 # convert to a SpatialPoints object, defining the coordinate system as
-# wgs84
-occ <- SpatialPoints(occurrence, wgs84())
+# projected wgs84 (lat/long)
+occ <- SpatialPoints(occurrence, wgs84(TRUE))
 ```
 
 
@@ -78,10 +80,10 @@ Next we load a bunch of raster files containing covariates for the model. Again,
 
 ```r
 # load the covariate rasters
-data(covs)
+data(covariates)
 
 # see a summary
-covs
+covariates
 ```
 
 ```
@@ -89,16 +91,16 @@ covs
 ## dimensions  : 100, 100, 10000, 3  (nrow, ncol, ncell, nlayers)
 ## resolution  : 0.2, 0.2  (x, y)
 ## extent      : -10, 10, -5, 15  (xmin, xmax, ymin, ymax)
-## coord. ref. : +init=epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0 
+## coord. ref. : +init=epsg:3395 +proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs +towgs84=0,0,0 
 ## data source : in memory
 ## names       :   cov_a,   cov_b,   cov_c 
-## min values  : -1.0090, -1.2520, -0.5173 
-## max values  : -0.1500, -0.3937,  0.2436
+## min values  :  -1.009,  -1.252,  -3.000 
+## max values  : -0.1500, -0.3937,  1.0000
 ```
 
 ```r
 # and plot them
-plot(covs)
+plot(covariates)
 ```
 
 ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
@@ -111,11 +113,11 @@ There are currently two functions to check the quality of incoming data: ```chec
 
 
 ```r
-# first we load a template raster to check covs against
+# first we load a template raster to check covariates against
 data(template)
 
 # then we run checkRasters
-checkRasters(covs, template)
+checkRasters(covariates, template)
 ```
 
 ```
@@ -123,11 +125,11 @@ checkRasters(covs, template)
 ## dimensions  : 100, 100, 10000, 3  (nrow, ncol, ncell, nlayers)
 ## resolution  : 0.2, 0.2  (x, y)
 ## extent      : -10, 10, -5, 15  (xmin, xmax, ymin, ymax)
-## coord. ref. : +init=epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0 
+## coord. ref. : +init=epsg:3395 +proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs +towgs84=0,0,0 
 ## data source : in memory
 ## names       :   cov_a,   cov_b,   cov_c 
-## min values  : -1.0090, -1.2520, -0.5173 
-## max values  : -0.1500, -0.3937,  0.2436
+## min values  :  -1.009,  -1.252,  -3.000 
+## max values  : -0.1500, -0.3937,  1.0000
 ```
 
 
@@ -140,6 +142,10 @@ Given a set of occurrence points and a raster image, we can do this using ```bgD
 
 
 ```r
+# to make sure this tutorial is reproducible, we set the seed for the
+# random number generator
+set.seed(1)
+
 # sample 300 pseudo-absence points from within 500km of the occurrence
 # points
 pseudo <- bgDistance(300, points = occ, raster = template, distance = 5e+05)
@@ -147,7 +153,7 @@ pseudo <- bgDistance(300, points = occ, raster = template, distance = 5e+05)
 # plot the template raster
 plot(template)
 
-# the pseudo-absences as hoolow circles
+# the pseudo-absences as hollow circles
 plot(pseudo, add = TRUE, pch = 1)
 
 # and the occurrence points as filled circles
@@ -167,10 +173,10 @@ First though we need to extract the covariate data for both sets of points
 
 ```r
 # extract covariates for occurrence points
-occ_covs <- extract(covs, occ)
+occ_covs <- extract(covariates, occ)
 
 # and pseudo-absence points
-pseudo_covs <- extract(covs, pseudo)
+pseudo_covs <- extract(covariates, pseudo)
 ```
 
 
@@ -189,25 +195,28 @@ all_data <- rbind(occ_data, pseudo_data)
 ```
 
 
-The covariate data and presence/pseudo-absence labels are now all in a single matrix. Before we fit a model we turn this into a dataframe. Dataframes have the advantage that they can contain categorical variables so this is an opportunity to define them as such using ```factor```.
+The covariate data and presence/pseudo-absence labels are now all in a single matrix. Before we fit a model we turn this into a dataframe. Unlike matrices, dataframes allow us to identify covariates as categorical variables. ```cov_c``` should be categorical, so we define it as such here so this is an opportunity to define them as such using ```factor```.
 
 
 ```r
 # coerce it into a dataframe
 all_data <- as.data.frame(all_data)
 
+# coerce cov_c to a factor
+all_data$cov_c <- factor(all_data$cov_c)
+
 # look at the first 6 records
 head(all_data)
 ```
 
 ```
-##   PA   cov_a   cov_b     cov_c
-## 1  1 -0.5197 -0.6062 -0.170268
-## 2  1 -0.4349 -0.8751  0.033754
-## 3  1 -0.3248 -0.8664  0.090126
-## 4  1 -0.2247 -0.7937  0.006187
-## 5  1 -0.2881 -0.7725  0.028439
-## 6  1 -0.2748 -0.8203  0.063974
+##   PA   cov_a   cov_b cov_c
+## 1  1 -0.7959 -0.9129    -1
+## 2  1 -0.5625 -0.7595    -1
+## 3  1 -0.3509 -0.8094     0
+## 4  1 -0.4149 -0.7869    -1
+## 5  1 -0.5430 -0.9558     0
+## 6  1 -0.2456 -0.8211     0
 ```
 
 ```r
@@ -218,13 +227,13 @@ summary(all_data)
 ```
 
 ```
-##        PA           cov_a            cov_b            cov_c        
-##  Min.   :0.00   Min.   :-0.910   Min.   :-1.252   Min.   :-0.5019  
-##  1st Qu.:0.00   1st Qu.:-0.610   1st Qu.:-0.877   1st Qu.:-0.1844  
-##  Median :0.00   Median :-0.502   Median :-0.811   Median :-0.0930  
-##  Mean   :0.25   Mean   :-0.506   Mean   :-0.808   Mean   :-0.1089  
-##  3rd Qu.:0.25   3rd Qu.:-0.396   3rd Qu.:-0.740   3rd Qu.:-0.0146  
-##  Max.   :1.00   Max.   :-0.180   Max.   :-0.535   Max.   : 0.1691
+##        PA           cov_a            cov_b        cov_c   
+##  Min.   :0.00   Min.   :-0.987   Min.   :-1.128   -2: 44  
+##  1st Qu.:0.00   1st Qu.:-0.725   1st Qu.:-0.877   -1:168  
+##  Median :0.00   Median :-0.607   Median :-0.782   0 :180  
+##  Mean   :0.25   Mean   :-0.605   Mean   :-0.783   1 :  8  
+##  3rd Qu.:0.25   3rd Qu.:-0.485   3rd Qu.:-0.684           
+##  Max.   :1.00   Max.   :-0.193   Max.   :-0.458
 ```
 
 
@@ -235,7 +244,7 @@ We're now ready to run a BRT model. The ```gbm.step``` function in the ```dismo`
 
 
 ```r
-brt <- runBRT(all_data, 2:4, 1, covs)
+brt <- runBRT(all_data, 2:4, 1, covariates)
 ```
 
 ```
@@ -252,7 +261,7 @@ brt <- runBRT(all_data, 2:4, 1, covs)
 ## total mean deviance =  0.6931 
 ## tolerance is fixed at  7e-04 
 ## now adding trees... 
-## fitting final gbm model with a fixed number of  400  trees for  PA
+## fitting final gbm model with a fixed number of  260  trees for  PA
 ```
 
 
@@ -262,8 +271,8 @@ We can plot the individual marginal effect curves for each covariate...
 
 
 ```r
-par(mfrow = c(1, nlayers(covs)))
-for (i in 1:nlayers(covs)) plot(brt$model, i)
+par(mfrow = c(1, nlayers(covariates)))
+for (i in 1:nlayers(covariates)) plot(brt$model, i)
 ```
 
 ![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
@@ -289,9 +298,9 @@ summary(brt$model)
 
 ```
 ##         var rel.inf
-## cov_a cov_a  79.716
-## cov_c cov_c  12.635
-## cov_b cov_b   7.649
+## cov_a cov_a  63.995
+## cov_b cov_b  27.567
+## cov_c cov_c   8.438
 ```
 
 

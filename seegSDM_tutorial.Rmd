@@ -31,7 +31,9 @@ To install seegSDM straight from github we use the ```install_github``` function
 library(devtools)
 
 # use install_github to install seegSDM, giving the name of repo & owner
-# install_github('seegSDM', 'SEEG-Oxford')
+# and installing all the packages it depends on
+
+# install_github('seegSDM', 'SEEG-Oxford', dependencies = 'Depends')
 
 # seegSDM should now be installed, so we just need to load it
 library(seegSDM)
@@ -52,20 +54,21 @@ head(occurrence)
 Most of the ```seegSDM``` functions use ```SpatialPoints``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. WE need to define the coordinate system, which we can do using the ```seegSDM``` helper function ````wgs84```.
 
 ```{r}
-# convert to a SpatialPoints object, defining the coordinate system as wgs84
-occ <- SpatialPoints(occurrence, wgs84())
+# convert to a SpatialPoints object, defining the coordinate system as
+# projected wgs84 (lat/long)
+occ <- SpatialPoints(occurrence, wgs84(TRUE))
 ```
 
 Next we load a bunch of raster files containing covariates for the model. Again, we use some fake data rasters which are provided with the package. You can import your own using ```raster``` from the ```raster``` package or maybe using the ````seegSDM``` function ```importRasters``` to make things a little easier.
 
 ```{r fig.width=8.5, fig.height=8}
 # load the covariate rasters
-data(covs)
+data(covariates)
 
 # see a summary
-covs
+covariates
 # and plot them
-plot(covs)
+plot(covariates)
 ```
 
 
@@ -74,11 +77,11 @@ plot(covs)
 There are currently two functions to check the quality of incoming data: ```checkRasters``` which checks that rasters match up with an expected template raster and ```checkOccurrences``` which checks that all data fields are present and that no datapoints folled into masked out areas on template raster. Here we only look at ```checkRasters```, since the templates for ```checkOccurrences``` are yet to be determined!
 
 ```{r}
-# first we load a template raster to check covs against
+# first we load a template raster to check covariates against
 data(template)
 
 # then we run checkRasters
-checkRasters(covs, template)
+checkRasters(covariates, template)
 ```
 
 If everything is fine the original object is returned (so here R prints a summary), otherwise an error is thrown. See ```?checkRasters``` for more details of the checks that are done.
@@ -89,13 +92,17 @@ There are various different schools of thought on how to select pseudo-absences 
 Given a set of occurrence points and a raster image, we can do this using ```bgDistance```, which uses the more generic pseudo-absence generation function ```bgSample```.
 
 ```{r fig.width = 6, fig.height = 6}
+# to make sure this tutorial is reproducible, we set the seed
+# for the random number generator
+set.seed(1)
+
 # sample 300 pseudo-absence points from within 500km of the occurrence points
 pseudo <- bgDistance (300, points = occ, raster = template, distance = 500000)
 
 # plot the template raster
 plot(template)
 
-# the pseudo-absences as hoolow circles
+# the pseudo-absences as hollow circles
 plot(pseudo, add = TRUE, pch = 1)
 
 # and the occurrence points as filled circles
@@ -111,10 +118,10 @@ First though we need to extract the covariate data for both sets of points
 
 ```{r}
 # extract covariates for occurrence points
-occ_covs <- extract(covs, occ)
+occ_covs <- extract(covariates, occ)
 
 # and pseudo-absence points
-pseudo_covs <- extract(covs, pseudo)
+pseudo_covs <- extract(covariates, pseudo)
 ```
 
 Then we need to combine them into single dataframe, making sure we add a label saying whether they are occurrence or pseudo-absence records
@@ -130,11 +137,14 @@ pseudo_data <- cbind(PA = rep(0, nrow(pseudo_covs)), pseudo_covs)
 all_data <- rbind(occ_data, pseudo_data)
 ```
 
-The covariate data and presence/pseudo-absence labels are now all in a single matrix. Before we fit a model we turn this into a dataframe. Dataframes have the advantage that they can contain categorical variables so this is an opportunity to define them as such using ```factor```.
+The covariate data and presence/pseudo-absence labels are now all in a single matrix. Before we fit a model we turn this into a dataframe. Unlike matrices, dataframes allow us to identify covariates as categorical variables. ```cov_c``` should be categorical, so we define it as such here so this is an opportunity to define them as such using ```factor```.
 
 ```{r}
 # coerce it into a dataframe
 all_data <- as.data.frame(all_data)
+
+# coerce cov_c to a factor
+all_data$cov_c <- factor(all_data$cov_c)
 
 # look at the first 6 records
 head(all_data)
@@ -150,7 +160,7 @@ summary(all_data)
 We're now ready to run a BRT model. The ```gbm.step``` function in the ```dismo``` package (which ```seegSDM``` loads) runs a cross-validation procedure to pick the best number of trees (an important parameter in BRT) and runs the final model. ```seegSDM``` provides a wrapper function ```runBRT``` for ```gbm.step``` with a set of SEEG-preferred default settings. Only four arguments need to be provided: the dataframe, the indicies for the presence/pseudo-absence and covariate columns and a ```RasterBrick``` object to predict to.
 
 ```{r message = FALSE}
-brt <- runBRT(all_data, 2:4, 1, covs)
+brt <- runBRT(all_data, 2:4, 1, covariates)
 ```
 
 ```runBRT``` returns a list giving the model, a raster of the predicted probability of presence and data to plot the relative influence and covariate effects. The last two are used in the BRT ensemble modelling, but we can visualise the single model using functions from the ```gbm``` package.
@@ -158,8 +168,8 @@ brt <- runBRT(all_data, 2:4, 1, covs)
 We can plot the individual marginal effect curves for each covariate...
 
 ```{r fig.width=12, fig.height=4}
-par(mfrow = c(1, nlayers(covs)))
-for(i in 1:nlayers(covs)) plot(brt$model, i)
+par(mfrow = c(1, nlayers(covariates)))
+for(i in 1:nlayers(covariates)) plot(brt$model, i)
 ```
 
 ...the 2-dimensional interaction between the first two covariates...

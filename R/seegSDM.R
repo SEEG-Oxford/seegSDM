@@ -82,8 +82,6 @@ checkOccurrences <- function(occurrences, evidence, evidence_threshold = -100,
 
   occurrences <- occurrences[!big_polygons, , drop = FALSE]
   
-  
-  
   # find points and polygons below evidence consensus threshold or outside mask
   vals <- extract(evidence, occurrences[, c('lat', 'long')], drop = FALSE)
   outside_mask <- is.na(vals)
@@ -418,6 +416,122 @@ bgDistance <- function (n, points, raster, distance, ...) {
   buff <- buffer(r, width = distance) * raster
   bgSample(buff, n = n, ...)
 }
+
+extractBhatt <- function (pars,
+                          occurrence,
+                          covariates,
+                          consensus,
+                          threshold = -25,
+                          factor = rep(FALSE, nlayers(covariates)),
+                          ...) {
+  # generate and extract pseudo-absence/pseudo-presence and occurrence
+  # covariates for a single BRT run using the procedure in Bhatt paper
+  # na = number of pseudo-absences per occurrence
+  # np = number of pseudo-presences per occurrence
+  # mu = distance (in decimal degrees) from which to select these
+  # a dataframe is created with the presence/absence code in the first column
+  # and extracted values in the other columns. factor can be used to
+  # coerce covariates into factors in the dataframe.
+  # dots is passed to bgDistance
+  
+  # make sure occurrence is the correct type
+  if (class(occurrence) != "SpatialPoints" & class(occurrence) != "SpatialPointsDataFrame") {
+    stop ('occurrence must be a SpatialPoints* object')
+  }
+  
+  # make sure the template raster and occurrence are projected
+  if (projection(consensus) != wgs84(TRUE)@projargs) {
+    stop ('consensus must be projected, try ?projectExtent and ?wgs84.')
+  }
+  if (projection(covariates) != wgs84(TRUE)@projargs) {
+    stop ('covariates must be projected, try ?projectExtent and ?wgs84.')
+  }
+  if (!is.projected(occurrence)) {
+    stop ('occurrence must be projected, try ?spTransform and ?wgs84.')
+  }
+  
+  # get number of occurrence records
+  no <- length(occurrence)
+  
+  # calculate
+  na <- ceiling(pars[1] * no)
+  np <- ceiling(pars[2] * no)
+  mu <- pars[3]
+  
+  # if any are required generate pseudo-absences and pseudo presences,
+  # extract and add labels
+  
+  # pseudo-absences
+  if (na > 0) {
+
+    # modify the consensus layer (-100:100) to probability scale (0, 1)
+    abs_consensus <- 1 - (consensus + 100) / 200
+    
+    # sample from it, weighted by consensus (more likely in -100, impossible in +100)
+    p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, ...)
+    p_abs_covs <- extract(covariates, p_abs)
+    p_abs_data <- cbind(PA = rep(0, nrow(p_abs_covs)), p_abs_covs)
+    
+  } else {
+    
+    p_abs <- p_abs_data <- NULL
+
+  }
+  
+  # pseudo-presences
+  if (np > 0) {
+
+    if (!exists('abs_consensus')) {
+      
+      # if a pseudo-absence consensus layer already exists then save some computation
+      pres_consensus <- 1 - abs_consensus
+      
+    } else {
+      
+      # otherwise create it from consensus
+      pres_consensus <- (consensus + 100) / 200
+      
+    }
+    
+    # threshold it (set anything below threshold to 0)
+    threshold <- (threshold + 100) / 200
+    pres_consensus[pres_consensus <= threshold] <- 0
+    
+    # sample from it, weighted by consensus (more likely in 100, impossible
+    # below threshold)
+    p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, ...)
+    p_pres_covs <- extract(covariates, p_pres)
+    p_pres_data <- cbind(PA = rep(1, nrow(p_pres_covs)), p_pres_covs)
+    
+  } else {
+    
+    p_pres <- p_pres_data <- NULL
+    
+  }
+  
+  # extract covariates for occurrence and add presence label
+  occ_covs <- extract(covariates, occurrence)
+  occ_data <- cbind(PA = rep(1, nrow(occ_covs)), occ_covs)
+  
+  # combine the different datasets and convert to a dataframe
+  all_data <- rbind(occ_data, p_abs_data, p_pres_data)
+  all_data <- as.data.frame(all_data)
+  
+  # if there are any factor covariates, convert the columns in the dataframe
+  if (any(factor)) {
+    facts <- which(factor)
+    for (i in facts) {
+      # plus one to avoid the PA column
+      all_data[, i + 1] <- factor(all_data[, i + 1])
+    }
+  }
+  
+  # return list with the dataframe and possibly the SpatialPoints objects
+  return (list(data = all_data,
+               pseudo_absence = p_abs,
+               pseudo_presence = p_pres))
+}
+
 
 biasGrid <- function(polygons, raster, sigma = 30)
   # create a bias grid from polygons using a gaussian moving window smoother

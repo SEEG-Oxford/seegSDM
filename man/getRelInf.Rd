@@ -31,7 +31,7 @@ A matrix giving the means and quantiles of relative influence statistics for eac
 }
 
 \seealso{
-\code{\link{relative.influence}}, \code{\link{runBRT}}, \code{\link{boxplot}}
+\code{\link{summary.gbm}}, \code{\link{runBRT}}, \code{\link{boxplot}}
 }
 \examples{
 # TO DO

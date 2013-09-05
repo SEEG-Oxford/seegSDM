@@ -10,27 +10,37 @@ require(raster)
 #                           Area = runif(3))#, stringsAsFactors = FALSE)
 
 # checking inputs
-checkOccurrences <- function(occurrences, evidence, evidence_threshold = -100,
-                             area_threshold = 1, verbose = TRUE) {
+checkOccurrences <- function(occurrences, consensus, consensus_threshold = -25,
+                             area_threshold = 1, max_distance = 0.05, spatial = TRUE,
+                             verbose = TRUE) {
   
   # given a dataframe "occurrence" of occurrence records
-  # and a rasterLayer "evidence" giving the evidence consensus map;
+  # and a rasterLayer "consensus" giving the evidence consensus map;
   #   - check column names of occurrence
   #   - remove polygons over the area limit
-  #   - remove points or polygons the outside evidence consensus
-  #   - for points outside mask, try to move them in otherwise reject
-    
+  #   - remove points or centroids the outside evidence consensus
+  #   - for points outside mask, try to move them in, otherwise reject
+  # If \code{spatial = TRUE} a \code{SpatialPointsDataFrame} object is returned,
+  # with proj4string set as projected wgs84
+  # max_distance is the maximum distance (n decimal degrees) to search for non-NA pixels for
+  # points landing in NA cells. Set to 0 to just throw them out
+  
+  # check that the consensus layer is projected
+  if (projection(consensus) != wgs84(TRUE)) {
+    stop ('consensus is not projected, please project it (or correct the coordinate system)')
+  }
+  
   # expected column names and data types
-  expected_names <- c('ID',
-                      'lat',
-                      'long',
-                      'type',
+  expected_names <- c('UniqueID',
+                      'Admin',
+                      'x',
+                      'y',
                       'Area')
   
   expected_classes <- c('integer',
+                        'integer',
                         'numeric',
                         'numeric',
-                        'character',
                         'numeric')
   
   # check if any expected column names are missing
@@ -68,67 +78,103 @@ checkOccurrences <- function(occurrences, evidence, evidence_threshold = -100,
                paste(message_vector, collapse = '\n')))
   }
   
+  
+  
+  # check that Admin contains a reasonable number (either admin level 0:3, or -9999 for points)
+  bad_admin <- !(occurrences$Admin %in% c(0:3, -9999))
+  
+  if (any(bad_admin)) {
+    stop (paste('bad Admin codes for records with these UniqueIDs:',
+                 occurrences$UniqueID[bad_admin]))
+  }  
+  
+  
+  
   # remove polygons over area limit
-  big_polygons <- occurrences$type == 'polygon' &
-    occurrences$Admin != -9999 &
+  big_polygons <- occurrences$Admin != -9999 &
     occurrences$Area > area_threshold
-    
+  
+  # notify the user
   if (verbose) {
     cat(paste(sum(big_polygons),
               "polygons had areas greater than the threshold of",
               area_threshold,
               "and will be removed.\n"))
   }
-
+  
+  # remove these from occurrences
   occurrences <- occurrences[!big_polygons, , drop = FALSE]
   
-  # find points and polygons below evidence consensus threshold or outside mask
-  vals <- extract(evidence, occurrences[, c('lat', 'long')], drop = FALSE)
+  
+  
+  # see if any points had values below (or equal to) the evidence consensus threshold
+  low_consensus <- values <= consensus_threshold 
+  
+  # let the user know
+  if (verbose) {
+    cat(paste('removing',
+              sum(low_consensus),
+              "points which were in areas with evidence consensus value below the threshold of",
+              consensus_threshold,
+              '\n'))
+  }
+  
+  # then remove them
+  occurrences <- occurrences[!low_consensus, , drop = FALSE]
+  
+  
+  
+  # find points (and centroids) outside mask
+  vals <- extract(consensus, occurrences[, c('x', 'y')], drop = FALSE)
   outside_mask <- is.na(vals)
-  if (verbose) {
-    cat(paste(sum(outside_mask),
-              "points were outside mask, attempting to find nearby land...\n"))
-  }
   
-  
-  
-  # ***
-  
-  # routine to move points inland here
-  
-  # ***
-  
+  if (any(outside_mask)) {
+    # if there are any outside the mask...
     
-  # otherwise find NAs again
-  values <- extract(evidence, occurrences[, c('lat', 'long')])
-  outside_mask <- is.na(values)
-  if (verbose) {
-    cat(paste('removing',
-              sum(outside_mask),
-              "points which were outside mask and couldn't be reconciled.
-              points: ",
-              which(outside_mask),
-              '\n'))
-  }
-  
-  # and remove from occurrences and vals
-  occurrences <- occurrences[!outside_mask, , drop = FALSE]
-  values <- values[!outside_mask]
-  
-  # remove any points with values below the evidence consensus threshold
-  low_evidence <- values <= evidence_threshold 
-  
-  if (verbose) {
-    cat(paste('removing',
-              sum(low_evidence),
-              "points which were in areas with evidence below the threshold of",
-              evidence_threshold,
-              '\n'))
-  }
-  
-  occurrences <- occurrences[!low_evidence, , drop = FALSE]
+    # notify the user
+    if (verbose) {
+      cat(paste())
+    }
+    
+    # try to find new coordinates for these
+    new_coords <- nearestLand(xyFromCell(which(outside_mask)),
+                              consensus,
+                              max_distance)
 
-  # return corrected occurrences dataframe
+    # replace those coordinates in occurrences
+    occurrences[outside_mask, c('x', 'y')] <- new_coords
+    
+    # how many of these are still not on land
+    still_out <- is.na(new_coords[, 1])
+    
+    # tell the user
+    if (verbose) {
+      cat(paste(sum(outside_mask),
+                'points were outside consensus.\n',
+                sum(!still_out),
+                'points were moved to dry land, ',
+                sum(still_out),
+                'points were further than',
+                max_distance,
+                'decimal degrees out and have been removed'))
+    }
+    
+    # update outside_mask
+    outside_mask[outside_mask] <- still_out
+
+    # and remove still-missigng points from occurrences and vals
+    occurrences <- occurrences[!outside_mask, , drop = FALSE]
+    values <- values[!outside_mask]
+  }
+
+  # if spatial = TRUE, return an SPDF, otherwise the dataframe
+  if (spatial) {
+    occurrences <- SpatialPointsDataFrame(cbind(occurrences$x, occurrences$y),
+                                          occurrences,
+                                          proj4string = wgs84(TRUE))
+  }
+  
+  # return corrected occurrences dataframe/SPDF
   return (occurrences)
 }
 
@@ -190,6 +236,54 @@ checkRasters <- function (rasters, template, cellbycell = FALSE) {
   }
   
   return (rasters)
+}
+
+nearestLand <- function (points, raster, max_distance) {
+  # get nearest non_na cells (within a maximum distance) to a set of points
+  # points can be anything extract accepts as the y argument
+  # max_distance is in the map units if raster is projected
+  # or metres otherwise
+  
+  # function to find nearest of a set of neighbours or return NA
+  nearest <- function (lis, raster) {
+    neighbours <- matrix(lis[[1]], ncol = 2)
+    point <- lis[[2]]
+    # neighbours is a two column matrix giving cell numbers and values
+    land <- !is.na(neighbours[, 2])
+    if (!any(land)) {
+      # if there is no land, give up and return NA
+      return (c(NA, NA))
+    } else{
+      # otherwise get the land cell coordinates
+      coords <- xyFromCell(raster, neighbours[land, 1])
+      
+      if (nrow(coords) == 1) {
+        # if there's only one, return it
+        return (coords[1, ])
+      }
+      
+      # otherwise calculate distances
+      dists <- sqrt((coords[, 1] - point[1]) ^ 2 +
+                      (coords[, 2] - point[2]) ^ 2)
+      
+      # and return the coordinates of the closest
+      return (coords[which.min(dists), ])
+    }
+  }
+  
+  # extract cell values within max_distance of the points
+  neighbour_list <- extract(raster, points,
+                            buffer = max_distance,
+                            cellnumbers = TRUE)
+  
+  # add the original point in there too
+  neighbour_list <- lapply(1:nrow(points),
+                           function(i) {
+                             list(neighbours = neighbour_list[[i]],
+                                  point = points[i, ])
+                           })
+  
+  return (t(sapply(neighbour_list, nearest, raster)))
 }
 
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,

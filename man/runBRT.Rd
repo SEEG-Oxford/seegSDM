@@ -12,7 +12,7 @@ BRT models sometimes fail to converge and the default implementation fails silen
 runBRT(data, gbm.x, gbm.y, pred.raster,
       wt.fun = function(PA) ifelse(PA == 1, 1, sum(PA)/sum(1 - PA)),
       max_tries = 5, verbose = FALSE, tree.complexity = 4, learning.rate = 0.005,
-      bag.fraction = 0.75, n.trees = 10, family = "bernoulli", n.folds = 10,
+      bag.fraction = 0.75, n.trees = 10, n.folds = 10,
       max.trees = 40000, step.size = 10, ...)
 }
 

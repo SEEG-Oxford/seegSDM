@@ -17,7 +17,7 @@ checkRasters(rasters, template, cellbycell = FALSE)
   \item{rasters}{
 A \code{RasterLayer}, \code{RasterBrick} or\code{RasterStack} object containing the raster  or rasters to check.
 }
-  \item{mask}{
+  \item{template}{
 A \code{RasterLayer} object giving the template raster to compare \code{rasters} to.
 }
   \item{cellbycell}{

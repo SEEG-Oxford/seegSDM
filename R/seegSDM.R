@@ -286,6 +286,50 @@ nearestLand <- function (points, raster, max_distance) {
   return (t(sapply(neighbour_list, nearest, raster)))
 }
 
+occurrence2SPDF <- function (occurrence) {
+  # helper function to convert an occurrence dataframe
+  # i.e. one which passes checkOccurrences into a SpatialPointsDataFrame object
+  
+  # get column numbers for coordinates
+  coord_cols <- which(names(occurrence) %in% c('x', 'y'))
+  
+  # convert to SPDF
+  occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],
+                                occurrence,
+                                coords.nrs  = coord_cols,
+                                proj4string = wgs84(TRUE))
+  return (occurrence)
+}
+
+getGAUL <- function (occurrence, admin) {
+  # given a SpatialPointsDataFrame (occurrence) and a brick of GAUL codes
+  # for admin levels 0 to 3, extract codes for polygon records
+  
+  # check that the coordinate references match
+  if (projection(occurrence) != projection(admin)) {
+    stop ('projection arguments for occurrence and admin do not match')
+  }
+  
+  # start with GAUL column filled with NAs
+  occurrence$GAUL <- rep(NA, nrow(occurrence))
+  
+  # loop through the 4 admin levels
+  for (level in 0:3) {
+    
+    # find relevant records
+    idx <- occurrence$Admin == level
+    
+    # if there are any polygons at that level
+    if (any(idx)) {
+      
+      # extract codes into GAUL column
+      occurrence$GAUL[idx] <- extract(admin[[level + 1]], occurrence[idx, ])
+    }
+  }
+  
+  return (occurrence)
+}
+
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     wt.fun = function(PA) ifelse(PA == 1,
                                                  1,

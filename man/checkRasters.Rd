@@ -32,14 +32,15 @@ If all checks are passed \code{rasters} is returned, otherwise \code{checkRaster
 \code{\link{checkOccurrences}}, \code{\link{tryCatch}}
 }
 \examples{
-## Not run
+## Not run:
 # (not running example when checking package as
 #   error messages would cause it to fail)
 
-# load an example raster
-raster <- raster(system.file("external/test.grd", package="raster"))
+# load the example template raster
+data(template)
+
 # make a load of copys
-raster_proj <- raster_extent <- raster_ncell <- raster_values <- raster
+raster_proj <- raster_extent <- raster_ncell <- raster_values <- template
 
 # and break them!
 # wrong projection
@@ -52,20 +53,20 @@ extent(raster_extent) <- extent(as.vector(extent(raster_extent)) / 2)
 raster_ncell <- aggregate(raster_ncell, 2)
 
 # and missing cell values
-raster_values[sample(1:nrow(raster), 20), sample(1:ncol(raster), 20)] <- NA
+raster_values[sample(1:nrow(template), 20), sample(1:ncol(template), 20)] <- NA
 
 # now test them
-ans <- checkRasters(raster_proj, raster)
-ans <- checkRasters(raster_extent, raster)
-ans <- checkRasters(raster_ncell, raster)
-ans <- checkRasters(raster_values, raster, cellbycell = TRUE)
+ans <- checkRasters(raster_proj, template)
+ans <- checkRasters(raster_extent, template)
+ans <- checkRasters(raster_ncell, template)
+ans <- checkRasters(raster_values, template, cellbycell = TRUE)
 
 # so nothing has been assigned to ans
 ans
 
 # note that using checkRasters to assign back to the same object is a bad idea
 # in a script:
-raster_proj <- checkRasters(raster_proj, raster)
+raster_proj <- checkRasters(raster_proj, template)
 # since it returns an error message, but the script continues with the original
 # dodgy raster as raster_proj wasn't overwritten by anything
 
@@ -76,17 +77,20 @@ run <- function (raster, template) {
 }
 
 # since the function will fail with the error message and stop
-run(raster_proj, raster)
+run(raster_proj, template)
+
+# (this is what it does with no error)
+run(template, template)
 
 # alternatively you could use tryCatch to overwrite with NULL
 # if there's an error
-raster_proj <- tryCatch(checkRasters(raster_proj, raster),
+raster_proj <- tryCatch(checkRasters(raster_proj, template),
                         error = function(error) NULL)
 raster_proj
 
 # An easier solution would be to assign the answer to a new object,
 # causing the rest of the script to fail if the checks aren't completed
-raster_clean <- checkRasters(raster_extent, raster)
+raster_clean <- checkRasters(raster_extent, template)
 
 plot(raster_clean)
 # doesn't exist so throws an error

@@ -20,10 +20,11 @@ data(evaluation)
 data(covariates)
 data(consensus)
 data(template)
+data(admin)
 }
 
 \format{
-  \code{occurrence}: a matrix with two columns (\code{x} and \code{y}), giving (projected) lat longs of sites at which a hypothetical disease has been reported.
+  \code{occurrence}: a dataframe giving occurrence data for a hypothetical disease (columns \code{UniqueID}, \code{Admin}, \code{x}, \code{y} and \code{Area} - as required by \code{\link{checkOccurrences}}).
   
   \code{evaluation}: a matrix with three columns, giving (projected) lat longs of sites which have been surveyed for the hypothetical disease (\code{x} and \code{y}) and a binary code of whether or not it was present (\code{PA}).
   
@@ -32,6 +33,8 @@ data(template)
   \code{consensus}: a \code{RasterLayer} giving the evidence consensus for the disease at regional level in the synthetic landscape. The evidence consensus values are a score ranging from -100 to 100 descrinbing the level of certainty of presence or absence of the disease at a regional level. A  score of -100 denotes absolute certainty of disease absence and 100 denotes absolute certainty of presence. A score of 0 denotes complete uncertainty as to whether the disease is present or absent.
   
   \code{template}: a \code{RasterLayer} acting as a template and land-sea mask for the synthetic landscape.
+  
+  \code{admin}: a \code{RasterBrick} with 4 layers giving regional codes for admin levels 0 to 3 for the synthetic landscape.
 }
 
 \source{

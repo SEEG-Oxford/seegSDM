@@ -44,7 +44,8 @@ library(seegSDM)
 
 ### <a id="load"></a>Loading data
 
-Next we load in some occurrence data. Here we'll use fake occurrence data provided with the package, though you can import your own using e.g. ```read.csv```. The occurrence object has only two columns, giving the latitudes and longitudes of observations of the fake disease. 
+Next we load in some occurrence data. Here we'll use fake occurrence data provided with the package, though you can import your own using e.g. ```read.csv```. The occurrence object has a number of different columns, giving coodinates of observations of a fake disease (both polygon and point data) as well as information needed for model fitting.
+
 
 ```r
 # load the data
@@ -55,17 +56,17 @@ head(occurrence)
 ```
 
 ```
-##   UniqueID Admin     x     y Area
-## 1        1 -9999 -6.15 -4.75   NA
-## 2        2 -9999 -4.65  5.05   NA
-## 3        3 -9999  2.65 -2.95   NA
-## 4        4 -9999 -5.35  5.05   NA
-## 5        5 -9999 -6.95 13.35   NA
-## 6        6 -9999 -9.75  3.75   NA
+##   UniqueID Admin Year     x     y Area
+## 1        1 -9999 1990 -6.15 -4.75   NA
+## 2        2 -9999 2013 -4.65  5.05   NA
+## 3        3 -9999 2009  2.65 -2.95   NA
+## 4        4 -9999 1992 -5.35  5.05   NA
+## 5        5 -9999 2008 -6.95 13.35   NA
+## 6        6 -9999 1999 -9.75  3.75   NA
 ```
 
 
-Most of the ```seegSDM``` functions use ```SpatialPoints*``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. We can do this using the function ```occurrence2SPDF``` which makes some assumptions about whats in ```occurrence```, see the helpfile for details.
+Most of the ```seegSDM``` functions use ```SpatialPoints*``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. We can do this using the function ```occurrence2SPDF``` which makes some assumptions about whats in ```occurrence``` (see the helpfile for details).
 
 
 ```r
@@ -109,14 +110,16 @@ plot(covariates)
 
 ### <a id="quality"></a>Quality control
 
-There are currently two functions to check the quality of incoming data: ```checkRasters``` which checks that rasters match up with an expected template raster and ```checkOccurrences``` which checks that all data fields are present and that no datapoints folled into masked out areas on template raster. Here we only look at ```checkRasters```, since the templates for ```checkOccurrences``` are yet to be determined!
+There are currently two functions to check the quality of incoming data: ```checkRasters``` which checks that rasters match up with an expected template raster and ```checkOccurrence``` which runs a number of checks on the incoming occurrence data to make sure there aren't any serious errors, and to tidy up some more minor ones.
+
+First we'll run ```checkRasters``` to make sure the ```covariates``` lines up with a template raster that we know is correct.
 
 
 ```r
-# first we load a template raster to check covariates against
+# load a template raster to check covariates against
 data(template)
 
-# then we run checkRasters
+# run checkRasters
 checkRasters(covariates, template)
 ```
 
@@ -135,10 +138,50 @@ checkRasters(covariates, template)
 
 If everything is fine the original object is returned (so here R prints a summary), otherwise an error is thrown. See ```?checkRasters``` for more details of the checks that are done.
 
-### <a id="pseudo"></a>Generating pseudo-absences
+Next we use ```checkOccurrence``` run a whole bunch of checks (```?checkOccurrence``` for details) on the incoming occurrence data. We need a few other raster layers to do this, including an evidence consensus layer and a raster brick of admin unit maps (again, these are fake data).
 
-There are various different schools of thought on how to select pseudo-absences for presence-only species distribution modelling. Currently SEEG projects are using a distance threshold biased by evidence consensus.
-Given a set of occurrence points and a raster image, we can do this using ```bgDistance```, which uses the more generic pseudo-absence generation function ```bgSample```.
+We load and plot the evidence consensus layer:
+
+```r
+data(consensus)
+plot(consensus)
+```
+
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+
+
+and a raster brick with (fake) GAUL codes at 4 different levels.
+
+```r
+# load and plot the four layers
+data(admin)
+plot(admin)
+```
+
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
+
+
+Now we can run ```checkOccurrence```
+
+```r
+# overwriting the occ object we defined before
+occ <- checkOccurrence(occurrence, consensus, admin)
+```
+
+```
+## 25 polygons had areas greater than the area threshold of 1 and will be removed.
+```
+
+
+some of the occurrence points were in polygons with areas geater than the default allowed maximum. The maximum allowed area can be altered. Other than this all of the checks were passed. If any major problems had been detected, ```checkOccurrence``` would have thrown an error message.
+
+### <a id="pseudo"></a>Generating pseudo-absences & extracting the data
+
+There are various different schools of thought on how to select pseudo-absences for presence-only species distribution modelling.
+
+The recent Dengue distribution paper by [Bhatt et al.](http://dx.doi.org/10.1038/nature12060) used a distance threshold and an evidence consensus layer to select both pseudo-absence and pseudo-presence points. The function ```extractBhatt``` takes a vector of three required parameters and applies this procedure. It also extracts the values of the covariates for all of these points. For polygon occurrence records the multiple values are efficiently extracted and summarised using the function ```extractAdmin```. For point data the ```raster``` package function ```extract``` is used.
+
+Other pseduo-data generation methods can be carried out using the more general functions ```bgSample``` and ```bgDistance```. Here we apply ```extractBhatt``` to our data using some arbitrary parameter settings.
 
 
 ```r
@@ -146,95 +189,57 @@ Given a set of occurrence points and a raster image, we can do this using ```bgD
 # random number generator
 set.seed(1)
 
-# sample 300 pseudo-absence points from within 500km of the occurrence
-# points
-pseudo <- bgDistance(300, points = occ, raster = template, distance = 5e+05)
-
-# plot the template raster
-plot(template)
-
-# the pseudo-absences as hollow circles
-plot(pseudo, add = TRUE, pch = 1)
-
-# and the occurrence points as filled circles
-plot(occ, add = T, pch = 16)
+# run extractBhatt, defining the last covariate as a factor
+lis <- extractBhatt(c(2, 1, 5), occ, covariates, consensus, admin, factor = c(FALSE, 
+    FALSE, TRUE), return_points = TRUE)
 ```
 
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
 
-
-If you use an evidence consensus raster instead of the template (probably with some transformation of the values), you can bias the sampling according to this by setting ```prob=TRUE``` in ```bgDistance``` (this will then be passed on to ```bgSample```) we don't have an example of that (yet) so the points will do for now.
-
-### <a id="extract"></a>Extracting covariate data 
-
-Now we have all the covariate rasters, occurrence and pseudo-absence points we are almost ready to run a model.
-First though we need to extract the covariate data for both sets of points
+With ```return_points = TRUE```, ```extractBhatt``` produces a list with three elements: a dataframe for modelling and the locations of the pseudo-presence and pseudo-absence records. We have a look at the object and plot the points.
 
 
 ```r
-# extract covariates for occurrence points
-occ_covs <- extract(covariates, occ)
-
-# and pseudo-absence points
-pseudo_covs <- extract(covariates, pseudo)
-```
-
-
-Then we need to combine them into single dataframe, making sure we add a label saying whether they are occurrence or pseudo-absence records
-
-
-```r
-# add a column of 1s to the occurrence covariates
-occ_data <- cbind(PA = rep(1, nrow(occ_covs)), occ_covs)
-
-# and a column of 0s to the pseudo-absence covariates
-pseudo_data <- cbind(PA = rep(0, nrow(pseudo_covs)), pseudo_covs)
-
-# then we combine the matrices together
-all_data <- rbind(occ_data, pseudo_data)
-```
-
-
-The covariate data and presence/pseudo-absence labels are now all in a single matrix. Before we fit a model we turn this into a dataframe. Unlike matrices, dataframes allow us to identify covariates as categorical variables. ```cov_c``` should be categorical, so we define it as such here so this is an opportunity to define them as such using ```factor```.
-
-
-```r
-# coerce it into a dataframe
-all_data <- as.data.frame(all_data)
-
-# coerce cov_c to a factor
-all_data$cov_c <- factor(all_data$cov_c)
-
-# look at the first 6 records
-head(all_data)
+# look what's in the list returned
+names(lis)
 ```
 
 ```
-##   PA   cov_a   cov_b cov_c
-## 1  1 -0.5557 -0.4272     5
-## 2  1 -0.3608 -0.2602     4
-## 3  1 -0.6765 -0.3166     4
-## 4  1 -0.5165 -0.2662     4
-## 5  1 -0.7829  0.1392     2
-## 6  1 -0.7377 -0.4456     3
+## [1] "data"            "pseudo_absence"  "pseudo_presence"
 ```
 
 ```r
 
-# summarize the dataframe (the previous checks should mean that there
-# aren't any NA values)
-summary(all_data)
+# summarise the dataframe which we'll use for modelling
+summary(lis$data)
 ```
 
 ```
-##        PA           cov_a            cov_b         cov_c  
-##  Min.   :0.00   Min.   :-1.208   Min.   :-0.5989   1:  1  
-##  1st Qu.:0.00   1st Qu.:-0.785   1st Qu.:-0.3462   2: 71  
-##  Median :0.00   Median :-0.660   Median :-0.2004   3:140  
-##  Mean   :0.25   Mean   :-0.688   Mean   :-0.1716   4:141  
-##  3rd Qu.:0.25   3rd Qu.:-0.538   3rd Qu.:-0.0293   5: 45  
-##  Max.   :1.00   Max.   :-0.323   Max.   : 0.4388   6:  2
+##        PA          cov_a            cov_b        cov_c  
+##  Min.   :0.0   Min.   :-1.265   Min.   :-0.583   1:  3  
+##  1st Qu.:0.0   1st Qu.:-0.859   1st Qu.:-0.305   2: 70  
+##  Median :0.5   Median :-0.708   Median :-0.149   3:102  
+##  Mean   :0.5   Mean   :-0.739   Mean   :-0.126   4: 93  
+##  3rd Qu.:1.0   3rd Qu.:-0.592   3rd Qu.: 0.026   5: 30  
+##  Max.   :1.0   Max.   :-0.361   Max.   : 0.457   6:  2
 ```
+
+```r
+
+# evidence consensus layer as a background
+plot(consensus)
+
+# add the pseudo-absences in light blue (note they aren't in high scoring
+# consensus regions)
+points(lis$pseudo_absence, pch = 16, col = "light blue")
+
+# and pseudo-presences in purple (not in the very low scoring regions)
+points(lis$pseudo_presence, pch = 16, col = "purple")
+
+# and add the occurrence points
+points(occ, pch = 16)
+```
+
+![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10.png) 
 
 
 
@@ -244,7 +249,7 @@ We're now ready to run a BRT model. The ```gbm.step``` function in the ```dismo`
 
 
 ```r
-brt <- runBRT(all_data, 2:4, 1, covariates)
+brt <- runBRT(lis$data, 2:4, 1, covariates)
 ```
 
 ```
@@ -254,14 +259,14 @@ brt <- runBRT(all_data, 2:4, 1, covariates)
 ##  
 ## Performing cross-validation optimisation of a boosted regression tree model 
 ## for PA with dataframe data and using a family of bernoulli 
-## Using 400 observations and 3 predictors 
+## Using 300 observations and 3 predictors 
 ## creating 10 initial models of 10 trees 
 ## 
 ##  folds are stratified by prevalence 
-## total mean deviance =  0.6931 
-## tolerance is fixed at  7e-04 
+## total mean deviance =  1.386 
+## tolerance is fixed at  0.0014 
 ## now adding trees... 
-## fitting final gbm model with a fixed number of  400  trees for  PA
+## fitting final gbm model with a fixed number of  430  trees for  PA
 ```
 
 
@@ -275,17 +280,16 @@ par(mfrow = c(1, nlayers(covariates)))
 for (i in 1:nlayers(covariates)) plot(brt$model, i)
 ```
 
-![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
 
 
 ...the 2-dimensional interaction between the first two covariates...
 
 ```r
-
 plot(brt$model, 1:2)
 ```
 
-![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
+![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
 
 
 ...the relative influence of each covariate...
@@ -294,13 +298,13 @@ plot(brt$model, 1:2)
 summary(brt$model)
 ```
 
-![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
+![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14.png) 
 
 ```
 ##         var rel.inf
-## cov_a cov_a  64.211
-## cov_b cov_b  31.267
-## cov_c cov_c   4.522
+## cov_a cov_a  87.688
+## cov_b cov_b  10.255
+## cov_c cov_c   2.057
 ```
 
 
@@ -310,11 +314,101 @@ summary(brt$model)
 plot(brt$pred, zlim = c(0, 1))
 ```
 
-![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14.png) 
+![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15.png) 
 
 
 
 ### <a id="ensemble"></a>Running a BRT ensemble in parallel
+
+The plots above show one of the drawbacks of single BRT models: they fit very jerky effects of environmental covariates. We can get smoother and more realistic effect curves through fitting and averaging an ensemble of multiple BRT models. Ensembling also allows us to reduce reliance of the model on the arbitrary selection of parameters for pseudo-data generation and enables us to produce estimates of uncertainty in both the model and its predictions.
+
+Next we'll set up an ensemble of models fitted using pseudo-data generated in different ways by altering the parameters passed to ```extractBhatt```. We first define the ranges of parameters to use then get all the different combinations using R's ```expand.grid``` function.
+
+
+```r
+# pseudo-absences per occurrence:
+na <- c(1, 5, 10)
+# pseudo-presences per occurrence:
+np <- c(0.1, 0.05, 0.01)
+# distance (in decimal degrees) within which to sample these
+mu <- c(1, 3, 5)
+
+pars <- expand.grid(na = na, np = np, mu = mu)
+
+# each row contains a different configuration od parameters
+head(pars)
+```
+
+```
+##   na   np mu
+## 1  1 0.10  1
+## 2  5 0.10  1
+## 3 10 0.10  1
+## 4  1 0.05  1
+## 5  5 0.05  1
+## 6 10 0.05  1
+```
+
+```r
+
+# now there are 3 * 3 * 3 = 27 different combinations and models to run
+nrow(pars)
+```
+
+```
+## [1] 27
+```
+
+
+To use all of the ```seegSDM``` functions for running ensembles we need to change these into a list, which we can do using ```lapply``` and a small function to subset ```pars```.
+
+
+```r
+sub <- function(i, pars) pars[i, ]
+par_list <- lapply(1:nrow(pars), sub, pars)
+```
+
+
+Unfortunately running BRT ensembles can be time consuming and it's preferable to run them in parallel across multiple processors. There are a number of different R packages to help with this, but here we use the ```snowfall``` package.
+
+Loading seegSDM has already loaded snowfall, so the first thing we need to do is set up a parallel cluster using the function ```sfInit```, which is as easy as this:
+
+
+```r
+# set up a cluster of two cpus in with parallel execution.  you may want
+# to run a different number depending on your computer!
+sfInit(cpus = 4, parallel = TRUE)
+```
+
+```
+## R Version:  R version 3.0.1 (2013-05-16)
+```
+
+```
+## snowfall 1.84-4 initialized (using snow 0.3-12): parallel execution on 4
+## CPUs.
+```
+
+
+We need to export any functions we want to run in parallel out to each processor. Everything we'll use is in ```seegSDM```, so we export the whole package using ```sfLibrary```
+
+
+```r
+sfLibrary(seegSDM)
+```
+
+```
+## Library seegSDM loaded.
+```
+
+```
+## Library seegSDM loaded in cluster.
+```
+
+
+Now we're ready to run some code in parallel. We use the function ```sfLapply``` which acts like ```lapply```, except that each element of the list is processed in parallel. We run ```extractBhatt``` over these different parameter settings.
+
+
 
 
 ### <a id="vis"></a>Visualising the BRT ensemble

@@ -639,6 +639,7 @@ extractBhatt <- function (pars,
                           admin,
                           threshold = -25,
                           factor = rep(FALSE, nlayers(covariates)),
+                          return_points = FALSE,
                           ...) {
   # generate and extract pseudo-absence/pseudo-presence and occurrence
   # covariates for a single BRT run using the procedure in Bhatt paper
@@ -783,11 +784,18 @@ extractBhatt <- function (pars,
       all_data[, i + 1] <- factor(all_data[, i + 1])
     }
   }
-  
+
   # return list with the dataframe and possibly the SpatialPoints objects
-  return (list(data = all_data,
-               pseudo_absence = p_abs,
-               pseudo_presence = p_pres))
+  
+  if (return_points) {
+    # if the points are required, return a list
+    return (list(data = all_data,
+                 pseudo_absence = p_abs,
+                 pseudo_presence = p_pres))
+  } else {
+    # otherwise just the dataframe
+    return (all_data)
+  }
 }
 
 

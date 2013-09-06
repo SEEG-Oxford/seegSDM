@@ -9,11 +9,11 @@ Generate pseudo-absence and pseudo-presence points according the procedure descr
 
 Where \code{n} is the number of occurrence points, \code{na * n} pseudo-absence points and \code{np * n} pseudo-presence points are generated at a maximum distance of \code{mu} decimal degrees from the occurrence points \code{occurrence}. The selection of pseudo-absence/presence points is spatially weighted based on the evidence consensus layer \code{consensus} (with values ranging from -100 to 100). Pseudo-absence points are more likely to be selected from cells with low consensus values (and never from cells with consensus 100). Pseudo-presence points are more likely to be from cells with high consensus values, and never from cells with values below \code{threshold}.
 
-The covariate values for occurrence, pseudo-absence and pseudo-presence points are extracted from \code{covariates} and combined into a dataframe ready for modelling. Covariate values for polygon records are extracted using \code{\link{extractAdmin}} and summarized either by their mean or mode for continuous and discrete variables respectively. Discrete variables should by identified using the \code{factors} argument which will also coerce the covariates into factors in the resulting dataframe. The dataframe is returned along with the pseudo-presence and pseudo-absence points.
+The covariate values for occurrence, pseudo-absence and pseudo-presence points are extracted from \code{covariates} and combined into a dataframe ready for modelling. Covariate values for polygon records are extracted using \code{\link{extractAdmin}} and summarized either by their mean or mode for continuous and discrete variables respectively. Discrete variables should by identified using the \code{factors} argument which will also coerce the covariates into factors in the resulting dataframe. If \code{points = TRUE} a list is returned containing the dataframe and the pseudo-presence and pseudo-absence points. If \code{return_points = FALSE} only the dataframe is returned.
 }
 \usage{
 extractBhatt(pars, occurrence, covariates, consensus, admin, threshold = -25,
-             factor = rep(FALSE, nlayers(covariates)), ...)
+             factor = rep(FALSE, nlayers(covariates)), return_points = FALSE, ...)
 }
 
 \arguments{
@@ -42,18 +42,24 @@ extractBhatt(pars, occurrence, covariates, consensus, admin, threshold = -25,
   \item{factor}{
     A logical vector stating whether each layer in \code{covariates} is discrete and should therefore be coerced into a factor.
   }
+  \item{return_points}{
+  Whether to return a list containing the dataframe and \code{SpatialPoints} objects of the pseudo-presence and pseudo-absence data (if \code{return_points = TRUE}) or just the dataframe (if \code{return_points = FALSE}).
+  }
   \item{\dots}{
     Additional arguments to pass to \code{bgSample}. Note that \code{prob} is already set as \code{TRUE}, so will be ignored. 
   }
 }
 
 \value{
-  A list with three elements:
+  If \code{return_points = TRUE}, a list with three elements:
     \item{data }{A dataframe with the first column containing 1s for occurrence and pseudo-presence records and 0s for pseudo-absence records and following columns containing the extracted covariates.}
     \item{pseudo_absence }{A \code{SpatialPoints} object of the pseudo-absence points selected. If \code{pars[1]} was 0 or lower this will be \code{NULL}}
     \item{pseudo_presence }{A \code{SpatialPoints} object of the pseudo-presence points selected. If \code{pars[2]} was 0 or lower this will be \code{NULL}}
+    
+  Otherwise just \code{data}.
 }
 \references{
+
 Bhatt et al. (2013) The global distribution and burden of dengue. Nature \url{http://dx.doi.org/10.1038/nature12060}
 }
 

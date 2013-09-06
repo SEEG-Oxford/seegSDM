@@ -1,63 +1,50 @@
 # function file for seegSDM package
 
-require(raster)
-
-# for testing
-# occurrences <- data.frame(ID = 1:3,
-#                           lat = letters[1:3],
-#                           long = rnorm(3),
-#                           type = 'point',
-#                           Area = runif(3))#, stringsAsFactors = FALSE)
-
 # checking inputs
-checkOccurrences <- function(occurrences, consensus, consensus_threshold = -25,
+checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = -25,
                              area_threshold = 1, max_distance = 0.05, spatial = TRUE,
                              verbose = TRUE) {
   
-  # given a dataframe "occurrence" of occurrence records
-  # and a rasterLayer "consensus" giving the evidence consensus map;
-  #   - check column names of occurrence
-  #   - remove polygons over the area limit
-  #   - remove points or centroids the outside evidence consensus
-  #   - for points outside mask, try to move them in, otherwise reject
-  # If \code{spatial = TRUE} a \code{SpatialPointsDataFrame} object is returned,
-  # with proj4string set as projected wgs84
-  # max_distance is the maximum distance (n decimal degrees) to search for non-NA pixels for
-  # points landing in NA cells. Set to 0 to just throw them out
+  # if occurrence
+  
   
   # check that the consensus layer is projected
-  if (projection(consensus) != wgs84(TRUE)) {
+  if (projection(consensus) != wgs84(TRUE)@projargs) {
     stop ('consensus is not projected, please project it (or correct the coordinate system)')
   }
   
   # expected column names and data types
   expected_names <- c('UniqueID',
                       'Admin',
+                      'Year',
                       'x',
                       'y',
                       'Area')
   
   expected_classes <- c('integer',
                         'integer',
+                        'integer',
                         'numeric',
                         'numeric',
                         'numeric')
   
+  # ~~~~~~~~~~~~~~
   # check if any expected column names are missing
-  missing <- expected_names[!expected_names %in% names(occurrences)]
+  missing <- expected_names[!expected_names %in% names(occurrence)]
   
   # if they are, throw an error 
   if (length(missing) > 0) {
     stop(paste('missing columns:', paste(missing, collapse = ', ')))
   }
   
+  # ~~~~~~~~~~~~~~
   # check column data types
   
-  # get data types of columns in occurrences
-  occurrence_classes <- sapply(occurrences, class)
+  # get data types of columns in occurrence
+  occurrence_classes <- sapply(occurrence, class)
   
   # get the expected data types in the same order
-  order <- match(expected_names, names(occurrences))
+  order <- match(expected_names, names(occurrence))
   expected_classes_ordered <- expected_classes[order]
   
   # do they match up?
@@ -68,7 +55,7 @@ checkOccurrences <- function(occurrences, consensus, consensus_threshold = -25,
 
     # list problems
     message_vector <- sapply(which(!classes_match),
-                             function(i) paste(names(occurrences)[i],
+                             function(i) paste(names(occurrence)[i],
                                                'is',
                                                occurrence_classes[i],
                                                'but should be',
@@ -79,53 +66,80 @@ checkOccurrences <- function(occurrences, consensus, consensus_threshold = -25,
   }
   
   
-  
+  # ~~~~~~~~~~~~~~
   # check that Admin contains a reasonable number (either admin level 0:3, or -9999 for points)
-  bad_admin <- !(occurrences$Admin %in% c(0:3, -9999))
+  bad_admin <- !(occurrence$Admin %in% c(0:3, -9999))
   
   if (any(bad_admin)) {
     stop (paste('bad Admin codes for records with these UniqueIDs:',
-                 occurrences$UniqueID[bad_admin]))
+                 occurrence$UniqueID[bad_admin]))
   }  
   
   
+  # ~~~~~~~~~~~~~~
+  # check that there are no duplicated polygon/year combinations
   
+  # if there are any polygons
+  if (any(occurrence$Admin != -9999)) {
+    
+    # find and add GAUL codes, maintaining occurrence as a dataframe
+    occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
+    
+    # get an index for which records are polygons
+    poly_idx <- occurrence$Admin != -9999
+    
+    # check for duplicates (Admin, GAUL and Year all the same)
+    poly_dup <- duplicated(occurrence[poly_idx, c('Admin', 'GAUL', 'Year')])
+  
+    # if any are duplicated give a warning but proceed
+    if (any(poly_dup)) {
+      stop (paste('there are duplicated polygon / year combinations
+                  at records with UniqueId:',
+                     paste(occurrence$UniqueId[poly_idx][poly_dup], collapse = ', ')))
+    }
+  }
+  
+  # ~~~~~~~~~~~~~~
   # remove polygons over area limit
-  big_polygons <- occurrences$Admin != -9999 &
-    occurrences$Area > area_threshold
+  big_polygons <- occurrence$Admin != -9999 &
+    occurrence$Area > area_threshold
   
   # notify the user
   if (verbose) {
     cat(paste(sum(big_polygons),
-              "polygons had areas greater than the threshold of",
+              "polygons had areas greater than the area threshold of",
               area_threshold,
               "and will be removed.\n"))
   }
   
-  # remove these from occurrences
-  occurrences <- occurrences[!big_polygons, , drop = FALSE]
+  # remove these from occurrence
+  occurrence <- occurrence[!big_polygons, , drop = FALSE]
   
   
+  # ~~~~~~~~~~~~~~
+  # see if any coordinates have values below (or equal to) the evidence consensus threshold
+  consensus_scores <- extract(consensus, occurrence[, c('x', 'y')])
+  low_consensus <- consensus_scores <= consensus_threshold 
   
-  # see if any points had values below (or equal to) the evidence consensus threshold
-  low_consensus <- values <= consensus_threshold 
-  
-  # let the user know
-  if (verbose) {
-    cat(paste('removing',
-              sum(low_consensus),
-              "points which were in areas with evidence consensus value below the threshold of",
-              consensus_threshold,
-              '\n'))
+  # if there were any
+  if (any(low_consensus)) {
+    
+    # let the user know
+    if (verbose) {
+      cat(paste('removing',
+                sum(low_consensus),
+                "points which were in areas with evidence consensus value below the threshold of",
+                consensus_threshold,
+                '\n'))
+    }
+    
+    # then remove them
+    occurrence <- occurrence[!low_consensus, , drop = FALSE]
   }
   
-  # then remove them
-  occurrences <- occurrences[!low_consensus, , drop = FALSE]
-  
-  
-  
+  # ~~~~~~~~~~~~~~
   # find points (and centroids) outside mask
-  vals <- extract(consensus, occurrences[, c('x', 'y')], drop = FALSE)
+  vals <- extract(consensus, occurrence[, c('x', 'y')], drop = FALSE)
   outside_mask <- is.na(vals)
   
   if (any(outside_mask)) {
@@ -141,8 +155,8 @@ checkOccurrences <- function(occurrences, consensus, consensus_threshold = -25,
                               consensus,
                               max_distance)
 
-    # replace those coordinates in occurrences
-    occurrences[outside_mask, c('x', 'y')] <- new_coords
+    # replace those coordinates in occurrence
+    occurrence[outside_mask, c('x', 'y')] <- new_coords
     
     # how many of these are still not on land
     still_out <- is.na(new_coords[, 1])
@@ -162,20 +176,21 @@ checkOccurrences <- function(occurrences, consensus, consensus_threshold = -25,
     # update outside_mask
     outside_mask[outside_mask] <- still_out
 
-    # and remove still-missigng points from occurrences and vals
-    occurrences <- occurrences[!outside_mask, , drop = FALSE]
+    # and remove still-missigng points from occurrence and vals
+    occurrence <- occurrence[!outside_mask, , drop = FALSE]
     values <- values[!outside_mask]
   }
-
+  
+  # ~~~~~~~~~~~~~~
   # if spatial = TRUE, return an SPDF, otherwise the dataframe
   if (spatial) {
-    occurrences <- SpatialPointsDataFrame(cbind(occurrences$x, occurrences$y),
-                                          occurrences,
+    occurrence <- SpatialPointsDataFrame(cbind(occurrence$x, occurrence$y),
+                                          occurrence,
                                           proj4string = wgs84(TRUE))
   }
   
-  # return corrected occurrences dataframe/SPDF
-  return (occurrences)
+  # return corrected occurrence dataframe/SPDF
+  return (occurrence)
 }
 
 checkRasters <- function (rasters, template, cellbycell = FALSE) {
@@ -288,7 +303,7 @@ nearestLand <- function (points, raster, max_distance) {
 
 occurrence2SPDF <- function (occurrence) {
   # helper function to convert an occurrence dataframe
-  # i.e. one which passes checkOccurrences into a SpatialPointsDataFrame object
+  # i.e. one which passes checkOccurrence into a SpatialPointsDataFrame object
   
   # get column numbers for coordinates
   coord_cols <- which(names(occurrence) %in% c('x', 'y'))
@@ -329,6 +344,68 @@ getGAUL <- function (occurrence, admin) {
   
   return (occurrence)
 }
+
+
+extractAdmin <- function (occurrence, covariates, admin, fun = mean) {
+  
+  # get indices for polygons in occurrence
+  poly_idx <- which(occurrence$Admin != -9999)
+  
+  # create an empty matrix to store the results
+  ex <- matrix(NA,
+               nrow = length(poly_idx),
+               ncol = nlayers(covariates))
+  
+  # give them useful names
+  colnames(ex) <- names(covariates)
+  
+  # pull out relevant vectors for these
+  all_admins <- occurrence$Admin[poly_idx]
+  all_GAULs <- occurrence$GAUL[poly_idx]
+  
+  for (level in 0:3) {
+    
+    # are each of the *polygon records* of this level?
+    level_idx <- all_admins == level
+    
+    # if there are any polygons at that level
+    if (any(level_idx)) {
+      
+      # get GAUL_codes levels of interest
+      level_GAULs <- all_GAULs[level_idx]
+      
+      # clone the admin layer we want
+      ad <- admin[[level + 1]]
+      
+      # get all (and possibly some excess) unique GAUL codes
+      level_all_codes <- ad@data@min : ad@data@max
+      
+      # remove the ones we *do* want from this list, by index
+      level_all_codes <- level_all_codes[-(level_GAULs - ad@data@min + 1)]
+      
+      # then reclassify ad to mask out the ones we don't want
+      # this should speed up the zonal operation
+      ad <- reclassify(ad,
+                       cbind(level_all_codes,
+                             rep(NA, length(level_all_codes))))
+      
+      # extract values for each zone, aggregating by 'fun'
+      zones <- zonal(covariates, ad, fun = fun)
+      
+      # match them to polygons (accounts for change in order and for duplicates)
+      which_zones <- match(level_GAULs, zones[, 1])
+      
+      # add them to the results matrix
+      ex[level_idx, ] <- zones[which_zones, -1]
+      
+    }
+    
+  }
+  
+  return (ex)
+  
+}
+
 
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     wt.fun = function(PA) ifelse(PA == 1,
@@ -559,6 +636,7 @@ extractBhatt <- function (pars,
                           occurrence,
                           covariates,
                           consensus,
+                          admin,
                           threshold = -25,
                           factor = rep(FALSE, nlayers(covariates)),
                           ...) {
@@ -573,16 +651,19 @@ extractBhatt <- function (pars,
   # dots is passed to bgDistance
   
   # make sure occurrence is the correct type
-  if (class(occurrence) != "SpatialPoints" & class(occurrence) != "SpatialPointsDataFrame") {
-    stop ('occurrence must be a SpatialPoints* object')
+  if (class(occurrence) != "SpatialPointsDataFrame") {
+    stop ('occurrence must be a SpatialPointsDataFrame object')
   }
   
   # make sure the template raster and occurrence are projected
   if (projection(consensus) != wgs84(TRUE)@projargs) {
-    stop ('consensus must be projected, try ?projectExtent and ?wgs84.')
+    stop ('consensus must be projected WGS84, try ?projectExtent and ?wgs84.')
   }
   if (projection(covariates) != wgs84(TRUE)@projargs) {
-    stop ('covariates must be projected, try ?projectExtent and ?wgs84.')
+    stop ('covariates must be projected WGS84, try ?projectExtent and ?wgs84.')
+  }
+  if (projection(admin) != wgs84(TRUE)@projargs) {
+    stop ('admin must be projected WGS84, try ?projectExtent and ?wgs84.')
   }
   if (!is.projected(occurrence)) {
     stop ('occurrence must be projected, try ?spTransform and ?wgs84.')
@@ -648,7 +729,46 @@ extractBhatt <- function (pars,
   }
   
   # extract covariates for occurrence and add presence label
-  occ_covs <- extract(covariates, occurrence)
+
+  # create an empty matrix for th occurrence covariate records
+  occ_covs <- matrix(NA,
+                     nrow = nrow(occurrence),
+                     ncol = nlayers(covariates))
+  
+  # give them their names
+  colnames(occ_covs) <- names(covariates)
+  
+  # find points
+  points <- occurrence$Admin == -9999
+
+  # if there are points
+  if (any(points)) {
+    # extract and add to the results
+    occ_covs[points, ] <- extract(covariates, occurrence[points, ])
+  }
+  
+  # if there are any polygons
+  if (any(!points)) {
+    # extract them, but treat factors and non-factors differently
+
+    if (any(factor)) {
+      # if there are any factors, get mode of polygon
+      occ_covs[!points, factor] <- extractAdmin(occurrence,
+                                                 covariates[[which(factor)]],
+                                                 admin,
+                                                 fun = modal)
+    }
+    if (any(!factor)) {
+      # if there are any continuous, get mean of polygon
+      occ_covs[!points, !factor] <- extractAdmin(occurrence,
+                                                 covariates[[which(!factor)]],
+                                                 admin,
+                                                 fun = mean)
+      
+    }
+  }
+  
+  # add a vector of ones
   occ_data <- cbind(PA = rep(1, nrow(occ_covs)), occ_covs)
   
   # combine the different datasets and convert to a dataframe

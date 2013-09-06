@@ -51,12 +51,11 @@ data(occurrence)
 head(occurrence)
 ```
 
-Most of the ```seegSDM``` functions use ```SpatialPoints``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. WE need to define the coordinate system, which we can do using the ```seegSDM``` helper function ````wgs84```.
+Most of the ```seegSDM``` functions use ```SpatialPoints*``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. We can do this using the function ```occurrence2SPDF``` which makes some assumptions about whats in ```occurrence```, see the helpfile for details.
 
 ```{r}
-# convert to a SpatialPoints object, defining the coordinate system as
-# projected wgs84 (lat/long)
-occ <- SpatialPoints(occurrence, wgs84(TRUE))
+# convert to a SpatialPoints object
+occ <- occurrence2SPDF(occurrence)
 ```
 
 Next we load a bunch of raster files containing covariates for the model. Again, we use some fake data rasters which are provided with the package. You can import your own using ```raster``` from the ```raster``` package or maybe using the ````seegSDM``` function ```importRasters``` to make things a little easier.
@@ -67,6 +66,7 @@ data(covariates)
 
 # see a summary
 covariates
+
 # and plot them
 plot(covariates)
 ```

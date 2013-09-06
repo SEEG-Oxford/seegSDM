@@ -13,7 +13,7 @@ occurrence2SPDF(occurrence)
 
 \arguments{
   \item{occurrence}{
-A dataframe containing \emph{at least} the columns \code{x} and \code{y} giving projected wgs84 coordinates. More likely, this will be a dataframe passing \code{\link{checkOccurrences}}.
+A dataframe containing \emph{at least} the columns \code{x} and \code{y} giving projected wgs84 coordinates. More likely, this will be a dataframe passing \code{\link{checkOccurrence}}.
 }
 }
 
@@ -22,7 +22,7 @@ A \code{SpatialPointsDataFrame} containing the dataframe \code{occurrence}.
 }
 
 \seealso{
-\code{\link{SpatialPointsDataFrame}}, \code{\link{checkOccurrences}}
+\code{\link{SpatialPointsDataFrame}}, \code{\link{checkOccurrence}}
 }
 \examples{
 # load the occurrence dataframe

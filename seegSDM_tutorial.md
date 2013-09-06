@@ -55,23 +55,22 @@ head(occurrence)
 ```
 
 ```
-##         x    y
-## [1,]  4.1 -0.1
-## [2,] -9.1  8.9
-## [3,] -7.7  4.9
-## [4,] -9.5  7.5
-## [5,] -7.9 -2.1
-## [6,] -7.9  0.9
+##   UniqueID Admin     x     y Area
+## 1        1 -9999 -6.15 -4.75   NA
+## 2        2 -9999 -4.65  5.05   NA
+## 3        3 -9999  2.65 -2.95   NA
+## 4        4 -9999 -5.35  5.05   NA
+## 5        5 -9999 -6.95 13.35   NA
+## 6        6 -9999 -9.75  3.75   NA
 ```
 
 
-Most of the ```seegSDM``` functions use ```SpatialPoints``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. WE need to define the coordinate system, which we can do using the ```seegSDM``` helper function ````wgs84```.
+Most of the ```seegSDM``` functions use ```SpatialPoints*``` objects (from the ```sp``` package) so we convert ```occurrence``` into one of these. We can do this using the function ```occurrence2SPDF``` which makes some assumptions about whats in ```occurrence```, see the helpfile for details.
 
 
 ```r
-# convert to a SpatialPoints object, defining the coordinate system as
-# projected wgs84 (lat/long)
-occ <- SpatialPoints(occurrence, wgs84(TRUE))
+# convert to a SpatialPoints object
+occ <- occurrence2SPDF(occurrence)
 ```
 
 
@@ -88,17 +87,18 @@ covariates
 
 ```
 ## class       : RasterBrick 
-## dimensions  : 100, 100, 10000, 3  (nrow, ncol, ncell, nlayers)
-## resolution  : 0.2, 0.2  (x, y)
+## dimensions  : 200, 200, 40000, 3  (nrow, ncol, ncell, nlayers)
+## resolution  : 0.1, 0.1  (x, y)
 ## extent      : -10, 10, -5, 15  (xmin, xmax, ymin, ymax)
-## coord. ref. : +init=epsg:3395 +proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs +towgs84=0,0,0 
+## coord. ref. : +init=epsg:3395 
 ## data source : in memory
 ## names       :   cov_a,   cov_b,   cov_c 
-## min values  :  -1.009,  -1.252,  -3.000 
-## max values  : -0.1500, -0.3937,  1.0000
+## min values  : -1.2989, -0.6801,  1.0000 
+## max values  : -0.2735,  0.6020,  6.0000
 ```
 
 ```r
+
 # and plot them
 plot(covariates)
 ```
@@ -122,14 +122,14 @@ checkRasters(covariates, template)
 
 ```
 ## class       : RasterBrick 
-## dimensions  : 100, 100, 10000, 3  (nrow, ncol, ncell, nlayers)
-## resolution  : 0.2, 0.2  (x, y)
+## dimensions  : 200, 200, 40000, 3  (nrow, ncol, ncell, nlayers)
+## resolution  : 0.1, 0.1  (x, y)
 ## extent      : -10, 10, -5, 15  (xmin, xmax, ymin, ymax)
-## coord. ref. : +init=epsg:3395 +proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs +towgs84=0,0,0 
+## coord. ref. : +init=epsg:3395 
 ## data source : in memory
 ## names       :   cov_a,   cov_b,   cov_c 
-## min values  :  -1.009,  -1.252,  -3.000 
-## max values  : -0.1500, -0.3937,  1.0000
+## min values  : -1.2989, -0.6801,  1.0000 
+## max values  : -0.2735,  0.6020,  6.0000
 ```
 
 
@@ -211,12 +211,12 @@ head(all_data)
 
 ```
 ##   PA   cov_a   cov_b cov_c
-## 1  1 -0.7959 -0.9129    -1
-## 2  1 -0.5625 -0.7595    -1
-## 3  1 -0.3509 -0.8094     0
-## 4  1 -0.4149 -0.7869    -1
-## 5  1 -0.5430 -0.9558     0
-## 6  1 -0.2456 -0.8211     0
+## 1  1 -0.5557 -0.4272     5
+## 2  1 -0.3608 -0.2602     4
+## 3  1 -0.6765 -0.3166     4
+## 4  1 -0.5165 -0.2662     4
+## 5  1 -0.7829  0.1392     2
+## 6  1 -0.7377 -0.4456     3
 ```
 
 ```r
@@ -227,13 +227,13 @@ summary(all_data)
 ```
 
 ```
-##        PA           cov_a            cov_b        cov_c   
-##  Min.   :0.00   Min.   :-0.987   Min.   :-1.128   -2: 44  
-##  1st Qu.:0.00   1st Qu.:-0.725   1st Qu.:-0.877   -1:168  
-##  Median :0.00   Median :-0.607   Median :-0.782   0 :180  
-##  Mean   :0.25   Mean   :-0.605   Mean   :-0.783   1 :  8  
-##  3rd Qu.:0.25   3rd Qu.:-0.485   3rd Qu.:-0.684           
-##  Max.   :1.00   Max.   :-0.193   Max.   :-0.458
+##        PA           cov_a            cov_b         cov_c  
+##  Min.   :0.00   Min.   :-1.208   Min.   :-0.5989   1:  1  
+##  1st Qu.:0.00   1st Qu.:-0.785   1st Qu.:-0.3462   2: 71  
+##  Median :0.00   Median :-0.660   Median :-0.2004   3:140  
+##  Mean   :0.25   Mean   :-0.688   Mean   :-0.1716   4:141  
+##  3rd Qu.:0.25   3rd Qu.:-0.538   3rd Qu.:-0.0293   5: 45  
+##  Max.   :1.00   Max.   :-0.323   Max.   : 0.4388   6:  2
 ```
 
 
@@ -261,7 +261,7 @@ brt <- runBRT(all_data, 2:4, 1, covariates)
 ## total mean deviance =  0.6931 
 ## tolerance is fixed at  7e-04 
 ## now adding trees... 
-## fitting final gbm model with a fixed number of  260  trees for  PA
+## fitting final gbm model with a fixed number of  400  trees for  PA
 ```
 
 
@@ -298,9 +298,9 @@ summary(brt$model)
 
 ```
 ##         var rel.inf
-## cov_a cov_a  63.995
-## cov_b cov_b  27.567
-## cov_c cov_c   8.438
+## cov_a cov_a  64.211
+## cov_b cov_b  31.267
+## cov_c cov_c   4.522
 ```
 
 

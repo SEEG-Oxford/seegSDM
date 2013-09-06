@@ -25,7 +25,7 @@ A \code{SpatialPointsDataFrame} identical to \code{occurrence}, with an addition
 }
 
 \seealso{
-\code{\link{SpatialPointsDataFrame}}, \code{\link{checkOccurrences}}, \code{\link{occurrence2SPDF}}
+\code{\link{SpatialPointsDataFrame}}, \code{\link{checkOccurrence}}, \code{\link{occurrence2SPDF}}
 }
 \examples{
 # load the occurrence and admin example objects

@@ -47,7 +47,7 @@ Functions for running and assessing BRT ensembles:
 
 Functions for quality control:
 
-\code{\link{checkOccurrences}}, \code{\link{checkRasters}}
+\code{\link{checkOccurrence}}, \code{\link{checkRasters}}
  
 Miscellaneous functions:
 

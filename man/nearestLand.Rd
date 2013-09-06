@@ -28,7 +28,7 @@ nearestLand(points, raster, max_distance)
 }
 
 \seealso{
-\code{\link{checkOccurrences}}
+\code{\link{checkOccurrence}}
 }
 
 \examples{

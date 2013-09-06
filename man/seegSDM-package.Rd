@@ -14,7 +14,7 @@ This will be developed to incorporate other statistical models, methods for sele
 Package: \tab seegSDM\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
-Date: \tab 2013-07-17\cr
+Date: \tab 2013-09-06\cr
 License: \tab What license is it under?\cr
 }
 Functions are provided to assist with the seeg SDM workflow:
@@ -33,9 +33,15 @@ Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{h
 }
 
 \seealso{
+
+Functions for quality control:
+
+\code{\link{checkOccurrence}}, \code{\link{checkRasters}}
+
 Functions for manipulating rasters and shapefiles:
 
-\code{\link{biasGrid}}, \code{\link{featureDensity}}, \code{\link{gaussWindow}}, \code{\link{osgb36}}, \code{\link{wgs84}}, \code{\link{en2os}}, \code{\link{extent2poly}}, \code{\link{importRasters}}, \code{\link{maxExtent}}, \code{\link{percCover}}, \code{\link{buildSP}}, \code{\link{nearestLand}}
+\code{\link{biasGrid}}, \code{\link{featureDensity}}, \code{\link{gaussWindow}}, \code{\link{osgb36}}, \code{\link{wgs84}}, \code{\link{en2os}}, \code{\link{extent2poly}}, \code{\link{importRasters}}, \code{\link{maxExtent}}, \code{\link{percCover}}, \code{\link{buildSP}}, \code{\link{nearestLand}}, \code{\link{extractAdmin}},
+\code{\link{getGAUL}}, \code{\link{occurrence2SPDF}}
 
 Functions for generating pseudo-absences:
 
@@ -45,12 +51,10 @@ Functions for running and assessing BRT ensembles:
 
 \code{\link{runBRT}}, \code{\link{getEffectPlots}}, \code{\link{getRelInf}}, \code{\link{combinePreds}}
 
-Functions for quality control:
-
-\code{\link{checkOccurrences}}, \code{\link{checkRasters}}
- 
 Miscellaneous functions:
 
-\code{\link{rmse}} \code{\link{sdWeighted}}, \code{\link{splitIdx}}, \code{\link{subsample}}
+\code{\link{rmse}}, \code{\link{sdWeighted}}, \code{\link{splitIdx}}, \code{\link{subsample}}
 
+Synthetic data for testing and examples:
+\code{\link{occurrence}}
 }

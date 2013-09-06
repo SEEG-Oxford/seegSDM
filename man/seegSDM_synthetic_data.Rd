@@ -4,6 +4,7 @@
 \alias{covariates}
 \alias{consensus}
 \alias{template}
+\alias{admin}
 
 \docType{data}
 \title{
@@ -24,7 +25,7 @@ data(admin)
 }
 
 \format{
-  \code{occurrence}: a dataframe giving occurrence data for a hypothetical disease (columns \code{UniqueID}, \code{Admin}, \code{x}, \code{y} and \code{Area} - as required by \code{\link{checkOccurrences}}).
+  \code{occurrence}: a dataframe giving occurrence data for a hypothetical disease (columns \code{UniqueID}, \code{Admin}, \code{Year}, \code{x}, \code{y} and \code{Area} - as required by \code{\link{checkOccurrence}}).
   
   \code{evaluation}: a matrix with three columns, giving (projected) lat longs of sites which have been surveyed for the hypothetical disease (\code{x} and \code{y}) and a binary code of whether or not it was present (\code{PA}).
   

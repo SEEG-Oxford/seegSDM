@@ -165,6 +165,7 @@ occurrence <- data.frame(UniqueID = 1:n_occ,
                                              n_occ,
                                              replace = TRUE,
                                              prob = c(0.5, 0.2, 0.15, 0.1, 0.05))),
+                         Year = sample(1975:2013, n_occ, replace = TRUE),
                          occurrence)
 
 occurrence$Admin <- as.integer(occurrence$Admin)

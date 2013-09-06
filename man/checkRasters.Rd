@@ -29,7 +29,7 @@ If all checks are passed \code{rasters} is returned, otherwise \code{checkRaster
 }
 
 \seealso{
-\code{\link{checkOccurrences}}, \code{\link{tryCatch}}
+\code{\link{checkOccurrence}}, \code{\link{tryCatch}}
 }
 \examples{
 ## Not run:
@@ -54,7 +54,7 @@ raster_ncell <- aggregate(raster_ncell, 2)
 
 # and missing cell values
 raster_values[sample(1:nrow(template), 20), sample(1:ncol(template), 20)] <- NA
-
+\dontrun{
 # now test them
 ans <- checkRasters(raster_proj, template)
 ans <- checkRasters(raster_extent, template)
@@ -94,6 +94,6 @@ raster_clean <- checkRasters(raster_extent, template)
 
 plot(raster_clean)
 # doesn't exist so throws an error
-
+}
 ## End(Not run)
 }

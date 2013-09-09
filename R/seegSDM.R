@@ -414,6 +414,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     bag.fraction = 0.75, n.trees = 10,
                     n.folds = 10, max.trees = 40000,
                     step.size = 10, ...)
+
   # wrapper to run a BRT model with Sam's defaults & a default 50:50 PA weighting
   # and return covariate effects, relative influence,
   # and a prediction map (on the probability scale).

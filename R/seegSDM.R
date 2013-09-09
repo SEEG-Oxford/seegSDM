@@ -408,13 +408,12 @@ extractAdmin <- function (occurrence, covariates, admin, fun = mean) {
 
 
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,
-                    wt.fun = function(PA) ifelse(PA == 1,
-                                                 1,
-                                                 sum(PA) / sum(1 - PA)),
+                    wt.fun = function(PA) rep(1, length(PA)),
                     max_tries = 5, verbose = FALSE,
                     tree.complexity = 4, learning.rate = 0.005,
                     bag.fraction = 0.75, n.trees = 10,
-                    n.folds = 10, max.trees = 40000, step.size = 10, ...)
+                    n.folds = 10, max.trees = 40000,
+                    step.size = 10, ...)
   # wrapper to run a BRT model with Sam's defaults & a default 50:50 PA weighting
   # and return covariate effects, relative influence,
   # and a prediction map (on the probability scale).
@@ -486,30 +485,96 @@ getEffectPlots <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), .
   # returns a list of matrices for each covariate and optionally plots the results
   # dots argument allows some customisation of the plotting outputs
   
+  getLevels <- function (cov, models) {
+    # get all the possible levels of covariate 'cov'
+    # from the BRT ensemble 'models'
+    if (models[[1]]$model$var.type[cov] != 0) {
+      # if gbm thinks it's a factor, calculate all possible levels
+      levels <- lapply(models, function (m) m$effects[[cov]][, 1])
+      levels <- unique(unlist(levels))
+      return (levels)
+    } else {
+      # if it isn't a factor return NULL
+      return (NULL)
+    }
+  }
+  
+  matchLevels <- function (m, cov, levels) {
+    # get effects of covariate for this model
+    eff <- m$effects[[cov]]
+    # blank vector of response for ALL levels
+    y <- rep(NA, length(levels))
+    # match those levels present here
+    y[match(eff[, 1], levels)] <- eff[, 2]
+    # return the marginal prediction
+    return (y)
+  }
+  
+  getEffect <- function (cov, models) {
+    # get levels
+    levels <- getLevels(cov, models)
+    if (is.null(levels)) {
+      # if it's continuous
+      # get x
+      x <- models[[1]]$effects[[cov]][, 1]
+      # get matrix of y
+      y <- sapply(models, function (x) x$effects[[cov]]$y)
+    } else {
+      # it it's a factor
+      x <- levels
+      y <- sapply(models, matchLevels, cov, levels)
+    }
+    
+    # get means and quantiles
+    mn <- rowMeans(y, na.rm = TRUE)
+    qs <- t(apply(y, 1, quantile, quantiles, na.rm = TRUE))
+    # and return these
+    return (cbind(covariate = x,
+                  mean = mn,
+                  qs))
+  }
+  
   ncovs <- length(models[[1]]$effects)
+  
   names <- sapply(models[[1]]$effects, function (x) names(x)[1])
   
-  effects <- lapply(1:ncovs, function (i) {
-    x <- models[[1]]$effects[[i]][, 1]
-    y <- sapply(models, function (x) x$effects[[i]]$y)
-    mn <- rowMeans(y)
-    qs <- t(apply(y, 1, quantile, quantiles))
-    cbind(covariate = x, mean = mn, qs)  
-  })
+  effects <- lapply(1:ncovs, getEffect, models)
   
   names(effects) <- names
   
   if (plot) {
-    op <- par(mfrow = n2mfrow(ncovs), mar = c(5, 4, 4, 2) + 0.1)
+#     op <- par(mfrow = n2mfrow(ncovs), mar = c(5, 4, 4, 2) + 0.1)
     for (i in 1:ncovs) {
-      plot(effects[[i]][, 2] ~ effects[[i]][, 1], type = 'n', ylim = range(effects[[i]][, 3:4]),
-           xlab = names[i], ylab = paste('f(', names[i], ')', sep = ''), ...)
-      polygon(c(effects[[i]][, 1], rev(effects[[i]][, 1])),
-              c(effects[[i]][, 3], rev(effects[[i]][, 4])),
-              col = 'light grey', lty = 0)
-      lines(effects[[i]][, 2] ~ effects[[i]][, 1], lwd = 2)
+      eff <- effects[[i]]
+      
+      if (is.null(getLevels(i, models))) {
+        # if it's a continuous covariate do a line and CI region
+        
+        # blank plot
+        plot(eff[, 2] ~ eff[, 1], type = 'n', ylim = range(eff[, 3:4]),
+             xlab = names[i], ylab = paste('f(', names[i], ')', sep = ''), ...)
+        # uncertainty region
+        polygon(c(eff[, 1], rev(eff[, 1])),
+                c(eff[, 3], rev(eff[, 4])),
+                col = 'light grey', lty = 0)
+        # mean line
+        lines(eff[, 2] ~ eff[, 1], lwd = 2)
+        
+      } else {
+        # if it's a factor, do dots and bars
+        
+        # blank plot
+        plot(eff[, 2] ~ eff[, 1], type = 'n', ylim = range(eff[, 3:4]),
+             xlab = names[i], ylab = paste('f(', names[i], ')', sep = ''), ...)
+        # uncertainty lines
+        segments(eff[, 1], eff[, 3], y1 = eff[, 4],
+                 col = 'light grey', lwd = 3)
+        # points
+        points(eff[, 2] ~ eff[, 1], pch = 16, cex = 1.5)
+      }
+      
     }
-    par(op)
+#     par(op)
   }
   
   return(effects)
@@ -650,6 +715,10 @@ extractBhatt <- function (pars,
   # and extracted values in the other columns. factor can be used to
   # coerce covariates into factors in the dataframe.
   # dots is passed to bgDistance
+  
+  # coerce pars into a numeric vector (lapply can pass it as a dataframe)
+  pars <- as.numeric(pars)
+  
   
   # make sure occurrence is the correct type
   if (class(occurrence) != "SpatialPointsDataFrame") {

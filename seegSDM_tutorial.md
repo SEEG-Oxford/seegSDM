@@ -3,20 +3,19 @@ Example workflow / tutorial for the seegSDM package
 
 This document runs through a typical workflow for distribution modelling using the ```seegSDM``` package.
 
-It will include importing and checking data, running BRT ensembles in parallel and examining the fitted models.
-This is a work in progress, so sorry if it stops halfway through or doesn't make any sense yet! Please report any issues via the [issues tracking system](https://github.com/SEEG-Oxford/seegSDM/issues).
+It will includes importing and checking data, running BRT ensembles in parallel, examining the fitted models and calculating and outputting prediciton rasters. Please report any issues via the [issues tracking system](https://github.com/SEEG-Oxford/seegSDM/issues).
 
-The structure is:
+### Contents
 
-##### [Installing the package](#install)
-##### [Loading data](#load)
-##### [Quality control](#quality)
-##### [Generating pseudo-absences](#pseudo)
-##### [Extracting covariate data](#extract)
-##### [Running a single BRT model](#BRT)
-##### [Running a BRT ensemble in parallel](#ensemble)
-##### [Visualising the BRT ensemble](#vis)
-##### [Outputting the results](#output)
+* [Installing the package](#install)
+* [Loading data](#load)
+* [Quality control](#quality)
+* [Generating pseudo-absences](#pseudo)
+* [Extracting covariate data](#extract)
+* [Running a single BRT model](#BRT)
+* [Running a BRT ensemble in parallel](#ensemble)
+* [Summarizing the BRT ensemble](#vis)
+* [Outputting the results](#output)
 
 
 
@@ -277,7 +276,9 @@ We can plot the individual marginal effect curves for each covariate...
 
 ```r
 par(mfrow = c(1, nlayers(covariates)))
-for (i in 1:nlayers(covariates)) plot(brt$model, i)
+for (i in 1:nlayers(covariates)) {
+    plot(brt$model, i)
+}
 ```
 
 ![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
@@ -335,7 +336,7 @@ mu <- c(1, 3, 5)
 
 pars <- expand.grid(na = na, np = np, mu = mu)
 
-# each row contains a different configuration od parameters
+# each row contains a different configuration of parameters
 head(pars)
 ```
 
@@ -364,7 +365,9 @@ To use all of the ```seegSDM``` functions for running ensembles we need to chang
 
 
 ```r
-sub <- function(i, pars) pars[i, ]
+sub <- function(i, pars) {
+    pars[i, ]
+}
 par_list <- lapply(1:nrow(pars), sub, pars)
 ```
 
@@ -375,7 +378,7 @@ Loading seegSDM has already loaded snowfall, so the first thing we need to do is
 
 
 ```r
-# set up a cluster of two cpus in with parallel execution.  you may want
+# set up a cluster of four cpus in with parallel execution.  You may want
 # to run a different number depending on your computer!
 sfInit(cpus = 4, parallel = TRUE)
 ```
@@ -409,12 +412,128 @@ sfLibrary(seegSDM)
 Now we're ready to run some code in parallel. We use the function ```sfLapply``` which acts like ```lapply```, except that each element of the list is processed in parallel. We run ```extractBhatt``` over these different parameter settings.
 
 
+```r
+# carry out data extraction for the ensemble in parallel takes around 9s
+# on my 4-core machine
+data_list <- sfLapply(par_list, extractBhatt, occ, covariates, consensus, admin, 
+    factor = c(FALSE, FALSE, TRUE))
+```
 
 
-### <a id="vis"></a>Visualising the BRT ensemble
+`data_list` is a list with each element containing a different dataframe for modelling. We run the BRT ensemble by using `sfLapply` again, this time with `runBRT`.
+
+
+```r
+# fit the models of the ensemble in parallel takes around 45s on my 4-core
+# machine
+model_list <- sfLapply(data_list, runBRT, 2:4, 1, covariates)
+
+# Now we've finished with the parallel cluster, we should shut it down
+sfStop()
+```
+
+```
+## Stopping cluster
+```
+
+
+We now have a list of model outputs, each of which contains the fitted model, predictions and information for plotting. We can pull out individual model runs and plot the predictions.
+
+
+```r
+par(mfrow = c(1, 2))
+plot(model_list[[1]]$pred, main = "run 1", zlim = c(0, 1))
+plot(model_list[[27]]$pred, main = "run 27", zlim = c(0, 1))
+```
+
+![plot of chunk unnamed-chunk-22](figure/unnamed-chunk-22.png) 
+
+
+### <a id="vis"></a>Summarizing the BRT ensemble
+
+There are three helper functions to help us summarize the BRT ensemble: `getRelInf`, `getEffectPlots` and `combinePreds`. `getRelInf` combines the models to get summaries of the relative influence of the covariates across all the models. It returns a matrix of means and quantiles, and optionally produces a boxplot.
+
+
+```r
+relinf <- getRelInf(model_list, plot = TRUE)
+```
+
+![plot of chunk unnamed-chunk-23](figure/unnamed-chunk-23.png) 
+
+```r
+relinf
+```
+
+```
+##         mean   2.5% 97.5%
+## cov_b 66.883 53.790 77.57
+## cov_a 27.160 16.635 40.33
+## cov_c  5.957  2.428 11.24
+```
+
+
+`getEffectPlots` performs a similar operation for the effect plots, optionally plotting mean effects with uncertainty intervals.
+
+
+```r
+par(mfrow = c(1, 3))
+effect <- getEffectPlots(model_list, plot = TRUE)
+```
+
+![plot of chunk unnamed-chunk-24](figure/unnamed-chunk-24.png) 
+
+
+`combinePreds` combines the prediction maps (on the probability scale) from multiple models and returns rasters giving the mean and quantiles of the ensemble predictions. unlike the previous two functions, `combinePreds` needs a `RasterBrick` or `RasterStack` object with each layers giving a single prediction. So we need to create one of these before we can use `combinePreds`. Note that we can also run `combinePreds` in parallel to save some time if the rasters are particularly large.
+
+
+```r
+# lapply to extract the predictions into a list
+preds <- lapply(model_list, function(x) x$pred)
+# coerce the list into a rasterbrick
+preds <- brick(preds)
+
+# now we can run combinePreds
+preds <- combinePreds(preds)
+
+# plot the resulting maps
+plot(preds, zlim = c(0, 1))
+```
+
+![plot of chunk unnamed-chunk-25](figure/unnamed-chunk-25.png) 
+
+
+We can create a simple map of prediction uncertainty by subtracting the lower from the upper quantile.
+
+
+```r
+# calculate uncertainty
+preds$uncertainty <- preds$upper - preds$lower
+
+# plot mean and uncertainty
+par(mfrow = c(1, 2))
+
+# plot mean
+plot(preds$mean, zlim = c(0, 1), main = "mean")
+
+# and uncertainty
+plot(preds$uncertainty, col = topo.colors(100), main = "uncertainty")
+```
+
+![plot of chunk unnamed-chunk-26](figure/unnamed-chunk-26.png) 
 
 
 ### <a id="output"></a>Outputting the results
+
+Outputting the prediction maps can be done with the function `writeRaster` in the `raster` package. See `?writeFormats` for the raster formats that can be written to, and how to specify them.
+
+
+```r
+# write the mean prediction and uncertainty rasters as Geo-Tiffs
+writeRaster(preds$mean, "c:/prediction_map", format = "GTiff")
+writeRaster(preds$uncertainty, "c:/uncertainty_map", format = "GTiff")
+```
+
+
 
 
 

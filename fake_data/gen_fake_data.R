@@ -139,6 +139,7 @@ n_eval <- 500
 
 # sample randomly to get an evaluation set of n_eval
 eval_pts <- bgSample(prob, n_eval, spatial = FALSE)
+colnames(eval_pts) <- c('Longitude', 'Latitude')
 PA <- rbinom(n_eval, 1, extract(prob, eval_pts))
 evaluation <- cbind(PA = PA, eval_pts)
 
@@ -158,10 +159,10 @@ n_occ <- 100
 # sample them from the probability of observing
 # (prob(observing|present) * prob(present))
 occurrence <- bgSample(observation, n_occ, prob = TRUE, spatial = FALSE)
-
+colnames(occurrence) <- c('Longitude', 'Latitude')
 # add additional columns to mimic a real occurrence dataset
 occurrence <- data.frame(UniqueID = 1:n_occ,
-                         Admin = sort(sample(c(-9999, 3:0),
+                         Admin = sort(sample(c(-999, 3:0),
                                              n_occ,
                                              replace = TRUE,
                                              prob = c(0.5, 0.2, 0.15, 0.1, 0.05))),
@@ -188,16 +189,16 @@ occurrence$Area <- rep(NA, nrow(occurrence))
 
 # fill in with the areas
 occurrence[occurrence$Admin == 0, 'Area'] <-
-  extract(area0, occurrence[occurrence$Admin == 0, c('x', 'y')])
+  extract(area0, occurrence[occurrence$Admin == 0, c('Longitude', 'Latitude')])
 occurrence[occurrence$Admin == 1, 'Area'] <-
-  extract(area1, occurrence[occurrence$Admin == 1, c('x', 'y')])
+  extract(area1, occurrence[occurrence$Admin == 1, c('Longitude', 'Latitude')])
 occurrence[occurrence$Admin == 2, 'Area'] <-
-  extract(area2, occurrence[occurrence$Admin == 2, c('x', 'y')])
+  extract(area2, occurrence[occurrence$Admin == 2, c('Longitude', 'Latitude')])
 occurrence[occurrence$Admin == 3, 'Area'] <-
-  extract(area3, occurrence[occurrence$Admin == 3, c('x', 'y')])
+  extract(area3, occurrence[occurrence$Admin == 3, c('Longitude', 'Latitude')])
 
 # check they're all covered
-stopifnot(all.equal(is.na(occurrence$Area), occurrence$Admin == -9999))
+stopifnot(all.equal(is.na(occurrence$Area), occurrence$Admin == -999))
 
 # save as an RData file
 save(occurrence, file = 'occurrence.RData')

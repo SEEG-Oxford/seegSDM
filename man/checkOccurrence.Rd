@@ -12,7 +12,7 @@ Given a dataframe \code{occurrence} of occurrence records and rasters giving the
     The column names of \code{occurrence} are checked to ensure that the following required fields are present and of the correct class:
     \itemize{
       \item{}{'UniqueID' (integer): the record's unique identifying number}
-      \item{}{'Admin' (integer, either 0, 1, 2, 3, or -9999): the admin level for polygons or -9999 for points}
+      \item{}{'Admin' (integer, either 0, 1, 2, 3, or -999): the admin level for polygons or -999 for points}
       \item{}{'Year' (integer): the year of the occurrence record}
       \item{}{'x' (numeric): the x coordinate (longitude) either of a point or a polygon centroid}
       \item{}{'y' (numeric): the y coordinate (latitude) either of a point or a polygon centroid}

@@ -17,8 +17,8 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   expected_names <- c('UniqueID',
                       'Admin',
                       'Year',
-                      'x',
-                      'y',
+                      'Longitude',
+                      'Latitude',
                       'Area')
   
   expected_classes <- c('integer',
@@ -40,15 +40,18 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   # ~~~~~~~~~~~~~~
   # check column data types
   
-  # get data types of columns in occurrence
-  occurrence_classes <- sapply(occurrence, class)
+  # get locations of expected names
+  occurrence_name_idx <- which(names(occurrence) %in% expected_names)
   
-  # get the expected data types in the same order
-  order <- match(expected_names, names(occurrence))
-  expected_classes_ordered <- expected_classes[order]
+  # get data types of columns in occurrence
+  occurrence_classes <- sapply(occurrence[, occurrence_name_idx], class)
+  
+#   # get the expected data types in the same order
+#   order <- match(expected_names, names(occurrence))
+#   expected_classes_ordered <- expected_classes[order]
   
   # do they match up?
-  classes_match <- occurrence_classes == expected_classes_ordered
+  classes_match <- occurrence_classes == expected_classes#_ordered
   
   # if not, stop with a helpful error
   if (!all(classes_match)) {
@@ -59,49 +62,26 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
                                                'is',
                                                occurrence_classes[i],
                                                'but should be',
-                                               expected_classes_ordered[i]))
+#                                                expected_classes_ordered[i]))
+                                               expected_classes[i]))
     
-    stop(paste("data types don't match\n",
+    stop(paste("data types don't match,\n",
                paste(message_vector, collapse = '\n')))
   }
   
   
   # ~~~~~~~~~~~~~~
   # check that Admin contains a reasonable number (either admin level 0:3, or -9999 for points)
-  bad_admin <- !(occurrence$Admin %in% c(0:3, -9999))
+  bad_admin <- !(occurrence$Admin %in% c(0:3, -999))
   
   if (any(bad_admin)) {
     stop (paste('bad Admin codes for records with these UniqueIDs:',
-                 occurrence$UniqueID[bad_admin]))
+                 paste(occurrence$UniqueID[bad_admin], collapse = ', ')))
   }  
-  
-  
-  # ~~~~~~~~~~~~~~
-  # check that there are no duplicated polygon/year combinations
-  
-  # if there are any polygons
-  if (any(occurrence$Admin != -9999)) {
-    
-    # find and add GAUL codes, maintaining occurrence as a dataframe
-    occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
-    
-    # get an index for which records are polygons
-    poly_idx <- occurrence$Admin != -9999
-    
-    # check for duplicates (Admin, GAUL and Year all the same)
-    poly_dup <- duplicated(occurrence[poly_idx, c('Admin', 'GAUL', 'Year')])
-  
-    # if any are duplicated give a warning but proceed
-    if (any(poly_dup)) {
-      stop (paste('there are duplicated polygon / year combinations
-                  at records with UniqueId:',
-                     paste(occurrence$UniqueId[poly_idx][poly_dup], collapse = ', ')))
-    }
-  }
-  
+
   # ~~~~~~~~~~~~~~
   # remove polygons over area limit
-  big_polygons <- occurrence$Admin != -9999 &
+  big_polygons <- occurrence$Admin != -999 &
     occurrence$Area > area_threshold
   
   # notify the user
@@ -109,54 +89,28 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
     cat(paste(sum(big_polygons),
               "polygons had areas greater than the area threshold of",
               area_threshold,
-              "and will be removed.\n"))
+              "and will be removed.\n\n"))
   }
   
   # remove these from occurrence
   occurrence <- occurrence[!big_polygons, , drop = FALSE]
   
-  
-  # ~~~~~~~~~~~~~~
-  # see if any coordinates have values below (or equal to) the evidence consensus threshold
-  consensus_scores <- extract(consensus, occurrence[, c('x', 'y')])
-  low_consensus <- consensus_scores <= consensus_threshold 
-  
-  # if there were any
-  if (any(low_consensus)) {
-    
-    # let the user know
-    if (verbose) {
-      cat(paste('removing',
-                sum(low_consensus),
-                "points which were in areas with evidence consensus value below the threshold of",
-                consensus_threshold,
-                '\n'))
-    }
-    
-    # then remove them
-    occurrence <- occurrence[!low_consensus, , drop = FALSE]
-  }
-  
   # ~~~~~~~~~~~~~~
   # find points (and centroids) outside mask
-  vals <- extract(consensus, occurrence[, c('x', 'y')], drop = FALSE)
+  vals <- extract(consensus, occurrence[, c('Longitude', 'Latitude')], drop = FALSE)
   outside_mask <- is.na(vals)
   
   if (any(outside_mask)) {
     # if there are any outside the mask...
     
-    # notify the user
-    if (verbose) {
-      cat(paste())
-    }
-    
     # try to find new coordinates for these
-    new_coords <- nearestLand(xyFromCell(which(outside_mask)),
+    new_coords <- nearestLand(xyFromCell(consensus,
+                                         which(outside_mask)),
                               consensus,
                               max_distance)
 
     # replace those coordinates in occurrence
-    occurrence[outside_mask, c('x', 'y')] <- new_coords
+    occurrence[outside_mask, c('Longitude', 'Latitude')] <- new_coords
     
     # how many of these are still not on land
     still_out <- is.na(new_coords[, 1])
@@ -170,7 +124,7 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
                 sum(still_out),
                 'points were further than',
                 max_distance,
-                'decimal degrees out and have been removed'))
+                'decimal degrees out and have been removed.\n\n'))
     }
     
     # update outside_mask
@@ -178,13 +132,60 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
 
     # and remove still-missigng points from occurrence and vals
     occurrence <- occurrence[!outside_mask, , drop = FALSE]
-    values <- values[!outside_mask]
+#     vals <- vals[!outside_mask]
   }
+  
+  # ~~~~~~~~~~~~~~
+  # see if any coordinates have values below (or equal to) the evidence consensus threshold
+  consensus_scores <- extract(consensus, occurrence[, c('Longitude', 'Latitude')])
+  low_consensus <- consensus_scores <= consensus_threshold 
+  
+  # if there were any
+  if (any(low_consensus)) {
+    
+    # let the user know
+    if (verbose) {
+      cat(paste('removing',
+                sum(low_consensus),
+                "points which were in areas with evidence consensus value below the threshold of",
+                consensus_threshold,
+                '\n\n'))
+    }
+    
+    # then remove them
+    occurrence <- occurrence[!low_consensus, , drop = FALSE]
+  }
+  
+  # ~~~~~~~~~~~~~~
+  # check that there are no duplicated polygon/year combinations
+  
+  # if there are any polygons
+  if (any(occurrence$Admin != -999)) {
+    
+    # find and add GAUL codes, maintaining occurrence as a dataframe
+    occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
+    
+    # get an index for which records are polygons
+    poly_idx <- occurrence$Admin != -999
+    
+    # check for duplicates (Admin, GAUL and Year all the same)
+    poly_dup <- duplicated(occurrence[poly_idx, c('Admin', 'GAUL', 'Year')])
+    
+    # if any are duplicated give a warning but proceed
+    if (any(poly_dup)) {
+      stop (paste('there are',
+                  length(poly_dup),
+                  'duplicated polygon / year combinations
+                  at records with UniqueId:',
+                  paste(occurrence$UniqueID[poly_idx][poly_dup], collapse = ', ')))
+    }
+  }
+  
   
   # ~~~~~~~~~~~~~~
   # if spatial = TRUE, return an SPDF, otherwise the dataframe
   if (spatial) {
-    occurrence <- SpatialPointsDataFrame(cbind(occurrence$x, occurrence$y),
+    occurrence <- SpatialPointsDataFrame(cbind(occurrence$Longitude, occurrence$Latitude),
                                           occurrence,
                                           proj4string = wgs84(TRUE))
   }
@@ -306,7 +307,7 @@ occurrence2SPDF <- function (occurrence) {
   # i.e. one which passes checkOccurrence into a SpatialPointsDataFrame object
   
   # get column numbers for coordinates
-  coord_cols <- which(names(occurrence) %in% c('x', 'y'))
+  coord_cols <- which(names(occurrence) %in% c('Longitude', 'Latitude'))
   
   # convert to SPDF
   occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],

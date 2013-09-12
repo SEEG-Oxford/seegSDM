@@ -46,10 +46,6 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   # get data types of columns in occurrence
   occurrence_classes <- sapply(occurrence[, occurrence_name_idx], class)
   
-#   # get the expected data types in the same order
-#   order <- match(expected_names, names(occurrence))
-#   expected_classes_ordered <- expected_classes[order]
-  
   # do they match up?
   classes_match <- occurrence_classes == expected_classes#_ordered
   
@@ -62,7 +58,6 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
                                                'is',
                                                occurrence_classes[i],
                                                'but should be',
-#                                                expected_classes_ordered[i]))
                                                expected_classes[i]))
     
     stop(paste("data types don't match,\n",
@@ -132,7 +127,6 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
 
     # and remove still-missigng points from occurrence and vals
     occurrence <- occurrence[!outside_mask, , drop = FALSE]
-#     vals <- vals[!outside_mask]
   }
   
   # ~~~~~~~~~~~~~~
@@ -254,6 +248,116 @@ checkRasters <- function (rasters, template, cellbycell = FALSE) {
   return (rasters)
 }
 
+tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
+  
+  # temporal standardisation
+  # Expand the dataframe according to date ranges and check for
+  # duplicate location/year combinations
+  # occurrence should have a column named 'SourceID' giving unique
+  # IDs for the multi-year source records, if this isn't presence,
+  # one will be created. Columns named 'Start_Year' and 'End_Year'
+  # must also be present. If a column named 'GAUL' is present it
+  # is assumed to contain correct GAUL codes for the polygons (or
+  # NA for points) otherwise a rasterbrick of admin units must be
+  # supplied via the 'admin' argument ang getGAUL will be used to
+  # add a 'GAUL' column. An 'Admin' column must also be present.
+  #
+  # Returns a list of the expanded dataframe and vector of duplicate
+  # records (or NULL if there are none).
+  
+  # get number of rows  
+  n <- nrow(occurrence)
+  
+  # if no source ID column, add one
+  if (!('SourceID' %in% names(occurrence))) {
+    occurrence$SourceID <- 1:n
+    
+    # tell the user
+    if (verbose) {
+      cat('SourceID column was missing, one has been added.\n\n')
+    }
+  }
+  
+  # if no GAUL column
+  if (!('GAUL' %in% names(occurrence))) {
+    # check whether admin was specified
+    if (is.null(admin)) {
+      # if not, throw an error
+      stop ('GAUL column was missing and an admin object was not provided.\n\n')
+      
+    } else {
+      # otherwise, add one
+      occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
+      
+      # and tell the user
+      if (verbose) {
+        cat('GAUL column was missing, one has been added using getGAUL.\n\n')
+      }
+      
+      # check if any were missed
+      failed_GAUL <- is.na(occurrence$GAUL[occurrence$Admin != -999])
+      
+      # and throw an error if so
+      if (any(failed_GAUL)) {
+        stop (paste(sum(failed_GAUL),
+                    'polygon centroids fell outside the masked area and their
+                    GAUL codes could not be determined. Try using nearestLand
+                    to correct these points.\n\n'))
+      }
+    }
+  }
+  
+  # expand the dataframe  
+  
+  # get date ranges (1 if same year)
+  range <- occurrence$End_Year - occurrence$Start_Year + 1
+  
+  # make index for repetitions (rep each index 'range' times)
+  rep_idx <- rep(1:n, times = range)
+  
+  # calculate years (start_year + 0:range)
+  years <- occurrence$Start_Year[rep_idx] + unlist(lapply(range, seq_len)) - 1
+  
+  # subset dataframe
+  df <- occurrence[rep_idx, ]
+  
+  # remove start and end year columns
+  df <- df[, !(names(df) %in% c('Start_Year', 'End_Year'))]
+  
+  # add years
+  df$Year <- years
+  
+  # and a unique ID
+  df$UniqueID <- 1:nrow(df)
+  
+  
+  # check for duplicates
+  
+  # if there are any polygons
+  
+  # look for polygons
+  polys <- df$Admin != -999
+  
+  if (any(polys)) {
+    # get duplicates (Admin, GAUL and Year all the same)
+    poly_dup <- duplicated(df[polys, c('Admin', 'GAUL', 'Year')])
+    duplicated_polygons <- which(polys)[poly_dup]
+  }
+  
+  # look for points
+  pnts <- df$Admin == -999
+  
+  if (any(pnts)) {
+    # get duplicates (Latitude, Longitude and Year all the same)
+    pnt_dup <- duplicated(df[pnts, c('Longitude', 'Latitude', 'Year')])
+    duplicated_points <- which(pnts)[pnt_dup]
+  }
+  
+  return (list(occurrence = df,
+               duplicated_polygons = duplicated_polygons,
+               duplicated_points = duplicated_points))
+}
+
 nearestLand <- function (points, raster, max_distance) {
   # get nearest non_na cells (within a maximum distance) to a set of points
   # points can be anything extract accepts as the y argument
@@ -307,7 +411,7 @@ occurrence2SPDF <- function (occurrence) {
   # i.e. one which passes checkOccurrence into a SpatialPointsDataFrame object
   
   # get column numbers for coordinates
-  coord_cols <- which(names(occurrence) %in% c('Longitude', 'Latitude'))
+  coord_cols <- match(c('Longitude', 'Latitude'), names(occurrence))
   
   # convert to SPDF
   occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],

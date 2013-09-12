@@ -14,8 +14,8 @@ Given a dataframe \code{occurrence} of occurrence records and rasters giving the
       \item{}{'UniqueID' (integer): the record's unique identifying number}
       \item{}{'Admin' (integer, either 0, 1, 2, 3, or -999): the admin level for polygons or -999 for points}
       \item{}{'Year' (integer): the year of the occurrence record}
-      \item{}{'x' (numeric): the x coordinate (longitude) either of a point or a polygon centroid}
-      \item{}{'y' (numeric): the y coordinate (latitude) either of a point or a polygon centroid}
+      \item{}{'Longitude' (numeric): the longitude either of a point or a polygon centroid}
+      \item{}{'Latitude' (numeric): the latitude either of a point or a polygon centroid}
       \item{}{'Area' (numeric): the area in square decimal degees of the polygon, or \code{NA} for a pixel}
     }
     Any error is thrown if any of these are not presnt or of the wrong class.

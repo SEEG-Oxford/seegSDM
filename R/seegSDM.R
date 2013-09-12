@@ -293,7 +293,7 @@ tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
       if (verbose) {
         cat('GAUL column was missing, one has been added using getGAUL.\n\n')
       }
-      
+
       # check if any were missed
       failed_GAUL <- is.na(occurrence$GAUL[occurrence$Admin != -999])
       
@@ -304,6 +304,7 @@ tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
                     GAUL codes could not be determined. Try using nearestLand
                     to correct these points.\n\n'))
       }
+
     }
   }
   

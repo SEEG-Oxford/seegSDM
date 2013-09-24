@@ -248,7 +248,7 @@ checkRasters <- function (rasters, template, cellbycell = FALSE) {
   return (rasters)
 }
 
-tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
+tempStand <- function (occurrence, admin, verbose = TRUE) {
   
   # temporal standardisation
   # Expand the dataframe according to date ranges and check for
@@ -280,13 +280,7 @@ tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
   
   # if no GAUL column
   if (!('GAUL' %in% names(occurrence))) {
-    # check whether admin was specified
-    if (is.null(admin)) {
-      # if not, throw an error
-      stop ('GAUL column was missing and an admin object was not provided.\n\n')
-      
-    } else {
-      # otherwise, add one
+      # add one
       occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
       
       # and tell the user
@@ -304,8 +298,6 @@ tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
                     GAUL codes could not be determined. Try using nearestLand
                     to correct these points.\n\n'))
       }
-
-    }
   }
   
   # expand the dataframe  
@@ -334,11 +326,10 @@ tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
   
   # check for duplicates
   
-  # if there are any polygons
-  
   # look for polygons
   polys <- df$Admin != -999
-  
+
+  # if there are any polygons
   if (any(polys)) {
     # get duplicates (Admin, GAUL and Year all the same)
     poly_dup <- duplicated(df[polys, c('Admin', 'GAUL', 'Year')])
@@ -349,8 +340,12 @@ tempStand <- function (occurrence, admin = NULL, verbose = TRUE) {
   pnts <- df$Admin == -999
   
   if (any(pnts)) {
-    # get duplicates (Latitude, Longitude and Year all the same)
-    pnt_dup <- duplicated(df[pnts, c('Longitude', 'Latitude', 'Year')])
+    
+    # get cell numbers in admin
+    nums <- cellFromXY(admin, df[pnts, c('Longitude', 'Latitude')])
+
+    # get duplicates (pixel and Year all the same)
+    pnt_dup <- duplicated(cbind(nums, df$Year[pnts]))
     duplicated_points <- which(pnts)[pnt_dup]
   }
   

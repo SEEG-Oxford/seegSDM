@@ -4,19 +4,20 @@
 \title{
 Temporal standardisation of occurrence data
 }
+
 \description{
 Expand a dataframe of occurrence by year range so that there is a separate record for each year. Also check for duplicated year / location combinations.
 
 \code{occurrence} should be a dataframe with columns named \code{Start_Year}, \code{End_Year}, \code{Admin}, \code{Latitude} and \code{Longitude} giving the start and end years of the date range, the admin level (0 to 3, or -999 for points) and the latitude and longitude of points or centroids. A \code{SourceID} column should also be present, giving a unique identifier for each of the input records. If a column of this name is not present one will be added. A \code{UniqueID} column is also added, giving a unique identifier for each record after the temporal standardisation.
 
-GAUL codes for each record are required to check for duplicates. This can either be provided as a column named \code{GAUL} in \code{occurrence} or a \code{RasterBrick} or \code{RasterStack} object \code{admin} giving the GAUL codes at different admin levels can be provided, in which case \code{\link{getGAUL}} will be used to extract the GAUL codes and add them to occurrence.
+GAUL codes for each record are required to check for duplicates. If these are provided as a column named \code{GAUL} in \code{occurrence}, then this is used, otherwise \code{\link{getGAUL}} is used to extract the GAUL codes from \code{admin} (a \code{RasterBrick} or \code{RasterStack} object giving the GAUL codes at different admin levels) and add them to \code{occurrence}.
 
 \code{tempStand} returns a list giving the expanded dataframe and row indices for the duplicated points and polygons.
 }
 \usage{
-tempStand(occurrence, admin = NULL, verbose = TRUE)
+tempStand(occurrence, admin, verbose = TRUE)
 }
-%- maybe also 'usage' for other objects documented here.
+
 \arguments{
   \item{occurrence}{
   A dataframe of occurrence data containing the columns \code{Start_Year}, \code{End_Year}, \code{Admin}, \code{Latitude} and \code{Longitude} and preferably \code{SourceID} and \code{GAUL}.
@@ -36,7 +37,7 @@ A list with three elements:
 
 \item{duplicated_polygons }{A vector giving the row numbers of the output element \code{occurrence} which contain duplicated polygon / year combinations. Note that only the first identical element is not listed.}
 
-\item{duplicated_points }{A vector giving the row numbers of the output element \code{occurrence} which contain duplicated point / year combinations. Latitudes and longitudes are directly compared, so hopefully these will b rare. Note that only the first identical element is not listed.}
+\item{duplicated_points }{A vector giving the row numbers of the output element \code{occurrence} which contain duplicated point / year combinations. Points are considered to be duplicates if they fall in the same pixel of \code{admin}. Note that the first of the identical elements is not listed.}
 }
 \seealso{
 \code{\link{getGAUL}}, \code{\link{duplicated}}

@@ -24,7 +24,7 @@ extractBhatt(pars, occurrence, covariates, consensus, admin, threshold = -25,
     \code{pars[3]}: the maximum distance (in decimal degrees) from occurrence points at which to select pseudo-presences and pseudo-absences (mu in Bhatt et al.)
   }
   \item{occurrence}{
-    A \code{SpatialPointsDataFrame} object giving occurrence records and containing \emph{at least} the columns \code{Admin} (giving the admin level for polygons or -9999 for points) and \code{GAUL} (giving the GAUL codes for polygons or \code{NA} for points).
+    A \code{SpatialPointsDataFrame} object giving occurrence records and containing \emph{at least} the columns \code{Admin} (giving the admin level for polygons or -999 for points) and \code{GAUL} (giving the GAUL codes for polygons or \code{NA} for points).
   }
   \item{covariates}{
     A \code{Raster*} object giving covariates to use in the model.

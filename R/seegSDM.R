@@ -66,7 +66,7 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   
   
   # ~~~~~~~~~~~~~~
-  # check that Admin contains a reasonable number (either admin level 0:3, or -9999 for points)
+  # check that Admin contains a reasonable number (either admin level 0:3, or -999 for points)
   bad_admin <- !(occurrence$Admin %in% c(0:3, -999))
   
   if (any(bad_admin)) {
@@ -450,7 +450,7 @@ getGAUL <- function (occurrence, admin) {
 extractAdmin <- function (occurrence, covariates, admin, fun = mean) {
   
   # get indices for polygons in occurrence
-  poly_idx <- which(occurrence$Admin != -9999)
+  poly_idx <- which(occurrence$Admin != -999)
   
   # create an empty matrix to store the results
   ex <- matrix(NA,
@@ -911,7 +911,7 @@ extractBhatt <- function (pars,
   colnames(occ_covs) <- names(covariates)
   
   # find points
-  points <- occurrence$Admin == -9999
+  points <- occurrence$Admin == -999
 
   # if there are points
   if (any(points)) {

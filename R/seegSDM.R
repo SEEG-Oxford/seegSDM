@@ -1,16 +1,23 @@
 # function file for seegSDM package
 
 # checking inputs
-checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = -25,
-                             area_threshold = 1, max_distance = 0.05, spatial = TRUE,
-                             verbose = TRUE) {
+checkOccurrence <- function(occurrence,
+                            consensus,
+                            admin,
+                            consensus_threshold = -25,
+                            area_threshold = 1,
+                            max_distance = 0.05,
+                            spatial = TRUE,
+                            verbose = TRUE) {
   
   # if occurrence
   
   
   # check that the consensus layer is projected
-  if (projection(consensus) != wgs84(TRUE)@projargs) {
-    stop ('consensus is not projected, please project it (or correct the coordinate system)')
+  if (CRSargs(projection(consensus, asText = FALSE)) !=
+        CRSargs(wgs84(TRUE))) {
+    stop ('consensus is not projected,
+          please project it (or correct the coordinate system)')
   }
   
   # expected column names and data types
@@ -66,7 +73,8 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   
   
   # ~~~~~~~~~~~~~~
-  # check that Admin contains a reasonable number (either admin level 0:3, or -999 for points)
+  # check that Admin contains a reasonable number
+  # (either admin level 0:3, or -999 for points)
   bad_admin <- !(occurrence$Admin %in% c(0:3, -999))
   
   if (any(bad_admin)) {
@@ -92,7 +100,10 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   
   # ~~~~~~~~~~~~~~
   # find points (and centroids) outside mask
-  vals <- extract(consensus, occurrence[, c('Longitude', 'Latitude')], drop = FALSE)
+  vals <- extract(consensus,
+                  occurrence[, c('Longitude', 'Latitude')],
+                  drop = FALSE)
+  
   outside_mask <- is.na(vals)
   
   if (any(outside_mask)) {
@@ -130,8 +141,11 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   }
   
   # ~~~~~~~~~~~~~~
-  # see if any coordinates have values below (or equal to) the evidence consensus threshold
-  consensus_scores <- extract(consensus, occurrence[, c('Longitude', 'Latitude')])
+  # see if any coordinates have values below (or equal to)
+  # the evidence consensus threshold
+  consensus_scores <- extract(consensus,
+                              occurrence[, c('Longitude', 'Latitude')])
+  
   low_consensus <- consensus_scores <= consensus_threshold 
   
   # if there were any
@@ -141,7 +155,8 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
     if (verbose) {
       cat(paste('removing',
                 sum(low_consensus),
-                "points which were in areas with evidence consensus value below the threshold of",
+                "points which were in areas with evidence consensus value below
+                the threshold of",
                 consensus_threshold,
                 '\n\n'))
     }
@@ -171,7 +186,8 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
                   length(poly_dup),
                   'duplicated polygon / year combinations
                   at records with UniqueId:',
-                  paste(occurrence$UniqueID[poly_idx][poly_dup], collapse = ', ')))
+                  paste(occurrence$UniqueID[poly_idx][poly_dup],
+                        collapse = ', ')))
     }
   }
   
@@ -179,7 +195,8 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
   # ~~~~~~~~~~~~~~
   # if spatial = TRUE, return an SPDF, otherwise the dataframe
   if (spatial) {
-    occurrence <- SpatialPointsDataFrame(cbind(occurrence$Longitude, occurrence$Latitude),
+    occurrence <- SpatialPointsDataFrame(cbind(occurrence$Longitude,
+                                               occurrence$Latitude),
                                           occurrence,
                                           proj4string = wgs84(TRUE))
   }
@@ -190,17 +207,19 @@ checkOccurrence <- function(occurrence, consensus, admin, consensus_threshold = 
 
 checkRasters <- function (rasters, template, cellbycell = FALSE) {
   
-  # check whether the raster* object 'rasters' conforms to the 'template' rasterLayer
-  # By default the extent and projection are compared.
-  # If 'cellbycell = TRUE' the pixel values are individually compared with the template
-  # though this can be very slow & RAM-hungry with large rasters.
-  # the function throws an error if anything is wrong and returns 'rasters' otherwise.
+  # check whether the raster* object 'rasters' conforms to the 'template'
+  # rasterLayer. By default the extent and projection are compared.
+  # If 'cellbycell = TRUE' the pixel values are individually compared with
+  # the template though this can be very slow & RAM-hungry with large rasters.
+  # the function throws an error if anything is wrong and returns 'rasters'
+  # otherwise.
   
   if (extent(rasters) != extent(template)) {
     stop('extents do not match, see ?extent')
   }
   
-  if (projection(rasters) != projection(template)) {
+  if (CRSargs(projection(rasters, asText = FALSE)) !=
+                CRSargs(projection(template, asText = FALSE))) {
     stop('projections do not match, see ?projection')
   }
   
@@ -422,7 +441,8 @@ getGAUL <- function (occurrence, admin) {
   # for admin levels 0 to 3, extract codes for polygon records
   
   # check that the coordinate references match
-  if (projection(occurrence) != projection(admin)) {
+  if (CRSargs(projection(occurrence, asText = FALSE)) !=
+        CRSargs(projection(admin, asText = FALSE))) {
     stop ('projection arguments for occurrence and admin do not match')
   }
   
@@ -493,7 +513,8 @@ extractAdmin <- function (occurrence, covariates, admin, fun = mean) {
       # extract values for each zone, aggregating by 'fun'
       zones <- zonal(covariates, ad, fun = fun)
       
-      # match them to polygons (accounts for change in order and for duplicates)
+      # match them to polygons
+      # (accounts for change in order and for duplicates)
       which_zones <- match(level_GAULs, zones[, 1])
       
       # add them to the results matrix
@@ -516,13 +537,14 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     n.folds = 10, max.trees = 40000,
                     step.size = 10, ...)
 
-  # wrapper to run a BRT model with Sam's defaults & a default 50:50 PA weighting
+  # wrapper to run a BRT model with Sam's defaults
   # and return covariate effects, relative influence,
   # and a prediction map (on the probability scale).
   # background points are weighted at 4 * presence points,
   # mimicking prevalence of 0.2
 {
-  # keep running until model isn't null (can happen with wrong leaning rate etc.)
+  # keep running until model isn't null
+  # (can happen with wrong leaning rate etc.)
 
   # set up for the while loop
   m <- NULL
@@ -560,8 +582,12 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
   # otherwise return the list of model objects
   # (predict grids, relative influence stats and prediction map)
   list(model = m,
-       effects = lapply(1:length(gbm.x), function(i) plot(m, i, return.grid = TRUE)),
+       effects = lapply(1:length(gbm.x), function(i) plot(m,
+                                                          i,
+                                                          return.grid = TRUE)),
+       
        relinf = summary(m, plotit = FALSE),
+       
        pred = predict(pred.raster, m, type = 'response', n.trees = m$n.trees))
 }
 
@@ -581,11 +607,16 @@ getRelInf <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), ...)
   return (relinf)
 }
 
-getEffectPlots <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), ...) {
+getEffectPlots <- function (models,
+                            plot = FALSE,
+                            quantiles = c(0.025, 0.975),
+                            ...) {
+  
   # given a list of BRT model bootstraps (each an output from runBRT)
   # get the mean and quantiles (95% by default) lines for effect plots
-  # returns a list of matrices for each covariate and optionally plots the results
-  # dots argument allows some customisation of the plotting outputs
+  # returns a list of matrices for each covariate and optionally plots
+  # the results. dots argument allows some customisation of the plotting
+  # outputs
   
   getLevels <- function (cov, models) {
     # get all the possible levels of covariate 'cov'
@@ -684,11 +715,11 @@ getEffectPlots <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), .
 
 combinePreds <- function (preds, quantiles = c(0.025, 0.975),
                           parallel = FALSE, maxn = NULL)
-  # function to calculate means and quantiles for each cell, given a rasterBrick
-  # or rasterStack where each layer is a single ensemble prediction.
-  # If a snowfall cluster is running, 'parallel = TRUE' sets the function to run
-  # in parallel. 'maxn' gives the maximum number of cells in each batch. If NULL
-  # this is set to fill all the cpus once.
+  # function to calculate means and quantiles for each cell, given a
+  # rasterBrick or rasterStack where each layer is a single ensemble
+  # prediction. If a snowfall cluster is running, 'parallel = TRUE'
+  # sets the function to run in parallel. 'maxn' gives the maximum number
+  # of cells in each batch. If NULL this is set to fill all the cpus once.
 {
   # function to get mean and quantiles
   getStats <- function (x, quants) {
@@ -718,7 +749,9 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975),
     idxs <- splitIdx(n, maxn)
     # get stats in parallel
     stats <- sfLapply(idxs,
-                      function(idx, dat, quants) getStats(dat[idx[1]:idx[2], ], quants),
+                      function(idx, dat, quants) {
+                        getStats(dat[idx[1]:idx[2], ], quants)
+                        },
                       dat, quantiles)
     
     stats <- do.call(rbind, stats)
@@ -748,7 +781,11 @@ devBern <- function (truth, prediction)
   -2 * sum(dbinom(truth, 1, prediction, log = TRUE))
 }
 
-subsample <- function (data, n, minimum = c(5, 5), prescol = 1, replace = FALSE) {
+subsample <- function (data,
+                       n,
+                       minimum = c(5, 5),
+                       prescol = 1,
+                       replace = FALSE) {
   # get a random subset of 'n' records from 'data', ensuring that there
   # are at least 'minimum[1]' presences and 'minimum[2]' absences.
   # assumes by default that presence/absence code is in column 1 ('prescol')
@@ -768,10 +805,14 @@ subsample <- function (data, n, minimum = c(5, 5), prescol = 1, replace = FALSE)
   return (sub)
 }
 
-bgSample <- function(raster, n = 1000, prob = FALSE, replace = FALSE, spatial = TRUE)
-  # sample N random pixels (not NA) from raster. If 'prob = TRUE' raster is assumed
-  # to be a bias grid and points sampled accordingly. If 'sp = TRUE' a
-  # SpatialPoints* object is returned, else a matrix of coordinates
+bgSample <- function(raster,
+                     n = 1000,
+                     prob = FALSE,
+                     replace = FALSE,
+                     spatial = TRUE)
+  # sample N random pixels (not NA) from raster. If 'prob = TRUE' raster
+  # is assumed to be a bias grid and points sampled accordingly. If 'sp = TRUE'
+  # a SpatialPoints* object is returned, else a matrix of coordinates
 {
   pixels <- which(!is.na(raster[]))
   if (prob) {
@@ -790,9 +831,9 @@ bgSample <- function(raster, n = 1000, prob = FALSE, replace = FALSE, spatial = 
 
 bgDistance <- function (n, points, raster, distance, ...) {
   # sample (nbg) background points from within a region within a given distance
-  # (distance) of occurrence points (an sp object given by sp). The dots argument
-  # can be used to pass options to bgSample. This is waaaay more efficient than
-  # anything using gBuffer.
+  # (distance) of occurrence points (an sp object given by sp). The dots
+  # argument can be used to pass options to bgSample. This is waaaay more
+  # efficient than anything using gBuffer.
   
   r <- rasterize(points@coords, raster)
   buff <- buffer(r, width = distance) * raster
@@ -828,13 +869,16 @@ extractBhatt <- function (pars,
   }
   
   # make sure the template raster and occurrence are projected
-  if (projection(consensus) != wgs84(TRUE)@projargs) {
+  if (CRSargs(projection(consensus, asText = FALSE)) !=
+        CRSargs(wgs84(TRUE))) {
     stop ('consensus must be projected WGS84, try ?projectExtent and ?wgs84.')
   }
-  if (projection(covariates) != wgs84(TRUE)@projargs) {
+  if (CRSargs(projection(covariates, asText = FALSE)) !=
+        CRSargs(wgs84(TRUE))) {
     stop ('covariates must be projected WGS84, try ?projectExtent and ?wgs84.')
   }
-  if (projection(admin) != wgs84(TRUE)@projargs) {
+  if (CRSargs(projection(admin, asText = FALSE)) !=
+        CRSargs(wgs84(TRUE))) {
     stop ('admin must be projected WGS84, try ?projectExtent and ?wgs84.')
   }
   if (!is.projected(occurrence)) {
@@ -858,7 +902,8 @@ extractBhatt <- function (pars,
     # modify the consensus layer (-100:100) to probability scale (0, 1)
     abs_consensus <- 1 - (consensus + 100) / 200
     
-    # sample from it, weighted by consensus (more likely in -100, impossible in +100)
+    # sample from it, weighted by consensus
+    # (more likely in -100, impossible in +100)
     p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, ...)
     p_abs_covs <- extract(covariates, p_abs)
     p_abs_data <- cbind(PA = rep(0, nrow(p_abs_covs)), p_abs_covs)
@@ -874,7 +919,8 @@ extractBhatt <- function (pars,
 
     if (!exists('abs_consensus')) {
       
-      # if a pseudo-absence consensus layer already exists then save some computation
+      # if a pseudo-absence consensus layer already exists
+      # then save some computation
       pres_consensus <- 1 - abs_consensus
       
     } else {
@@ -986,13 +1032,17 @@ biasGrid <- function(polygons, raster, sigma = 30)
   sigma <- ceiling(sigma / mean(res(raster)))
   # use a window of 5 * sigma
   w <- gaussWindow(sigma * 5, sigma)
-  print(system.time(ras <- focal(ras, w = w / sum(w), pad = TRUE, na.rm = TRUE)))
+  print(system.time(ras <- focal(ras,
+                                 w = w / sum(w),
+                                 pad = TRUE,
+                                 na.rm = TRUE)))
   # replace mask
   ras[is.na(ras[])] <- 0
   mask(ras, raster)
 }
 
-# bufferMask <- function(feature, raster, km = 100, val = NULL, maxn = 1000, parallel = FALSE, dissolve = FALSE)
+# bufferMask <- function(feature, raster, km = 100, val = NULL, maxn = 1000,
+#   parallel = FALSE, dissolve = FALSE)
 #   # Returns a mask giving the non-NA areas of 'raster' which are within
 #   # 'km' kilometres of 'feature'. If val is specified, non-NA values are
 #   # assigned val, if null the values in (the first layer of) raster are
@@ -1001,7 +1051,8 @@ biasGrid <- function(polygons, raster, sigma = 30)
 #   # running, setting 'parallel = TRUE', runs the buffering in parallel. 
 #   # Uses rgeos::gBuffer and rgdal::spTransform
 # 
-#   # NOTE: bgDistance is MUCH FASTER & more memory safe for generating pseuco-absences
+#   # NOTE: bgDistance is MUCH FASTER & more memory safe for generating
+#   pseudo-absences
 #   
 #   {
 #   # if raster is a stack or brick, get the first layer

@@ -14,7 +14,7 @@ This will be developed to incorporate other statistical models, methods for sele
 Package: \tab seegSDM\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
-Date: \tab 2013-09-06\cr
+Date: \tab 2013-10-21\cr
 License: \tab What license is it under?\cr
 }
 Functions are provided to assist with the seeg SDM workflow:

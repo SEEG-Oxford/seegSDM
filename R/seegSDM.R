@@ -535,7 +535,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     tree.complexity = 4, learning.rate = 0.005,
                     bag.fraction = 0.75, n.trees = 10,
                     n.folds = 10, max.trees = 40000,
-                    step.size = 10, ...)
+                    step.size = 10, step = TRUE, ...)
 
   # wrapper to run a BRT model with Sam's defaults
   # and return covariate effects, relative influence,
@@ -546,36 +546,54 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
   # keep running until model isn't null
   # (can happen with wrong leaning rate etc.)
 
-  # set up for the while loop
-  m <- NULL
-  tries <- 0
-  
-  # try 5 times
-  while (is.null(m) & tries < max_tries) {
-    # fit the model, if it fails m will be NULL and the loop will continue
-    m <- gbm.step(data = data,
-                  gbm.x = gbm.x,
-                  gbm.y = gbm.y,
-                  step.size = 10,
-                  tree.complexity = tree.complexity,
-                  verbose = verbose,
-                  learning.rate = learning.rate,
-                  bag.fraction = bag.fraction,
-                  n.trees = n.trees,
-                  max.trees = max.trees,
-                  plot.main = FALSE,
-                  site.weights = wt.fun(data[, gbm.y]),
-                  ...)
+  if (step) {
+    # if using gbm.step
     
-    # add one to the tries counter
-    tries <- tries + 1
-  }
+    # set up for the while loop
+    m <- NULL
+    tries <- 0
+    
+    # try 5 times
+    while (is.null(m) & tries < max_tries) {
+      # fit the model, if it fails m will be NULL and the loop will continue
+      m <- gbm.step(data = data,
+                    gbm.x = gbm.x,
+                    gbm.y = gbm.y,
+                    step.size = 10,
+                    tree.complexity = tree.complexity,
+                    verbose = verbose,
+                    learning.rate = learning.rate,
+                    bag.fraction = bag.fraction,
+                    n.trees = n.trees,
+                    max.trees = max.trees,
+                    plot.main = FALSE,
+                    site.weights = wt.fun(data[, gbm.y]),
+                    ...)
+      
+      # add one to the tries counter
+      tries <- tries + 1
+    }
+    
+    # throw an error if it still hasn't worked after max_tries
+    if (tries >= max_tries) {
+      stop (paste('Unexpected item in the bagging area!\nStopped after',
+                  max_tries,
+                  'attempts, try reducing the step.size or learning rate'))
+    }
+    
+  } else {
+    # if not stepping, run a single BRT with n.trees trees
   
-  # throw an error if it still hasn't worked after max_tries
-  if (tries >= max_tries) {
-    stop (paste('Unexpected item in the bagging area!\nStopped after',
-                max_tries,
-                'attempts, try reducing the step.size or learning rate'))
+    m <- gbm(data[, gbm.y] ~ .,
+             distribution = 'bernoulli',
+             data = data[, gbm.x],
+             n.trees = n.trees,
+             interaction.depth = tree.complexity,
+             verbose = verbose,
+             shrinkage = learning.rate,
+             bag.fraction = bag.fraction,
+             weights = wt.fun(data[, gbm.y]),
+             ...)
   }
     
   

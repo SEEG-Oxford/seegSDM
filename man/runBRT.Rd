@@ -5,15 +5,17 @@
 Run a boosted regression tree model using Sam's default settings
 }
 \description{
-A wrapper to run a BRT model using \code{\link{gbm.step}} with Sam's defaults. Covariate effect curves and relative influences and a prediction map on the probability scale are returned. A function to define regression weights can be specified through \code{wt.fun}.
-BRT models sometimes fail to converge and the default implementation fails silently, returning \code{NULL}. \code{runBRT} instead attempts to run a model \code{max_tries} times and fails with an error if it still hasn't converged.
+A wrapper to run a BRT model using \code{\link{gbm.step}} (or optionally just \code{\link{gbm}}) with Sam's default parameter settings. Covariate effect curves, relative influences and a prediction map on the probability scale are returned. A function to define regression weights can be specified through \code{wt.fun}.
+BRT models sometimes fail to converge and the \code{gbm.step} implementation fails silently, returning \code{NULL}. \code{runBRT} instead attempts to run a model \code{max_tries} times and fails with an error if it still hasn't converged.
+To run a BRT model \emph{without} optimising the number of trees you can set \code{step} to \code{FALSE} - which should be much faster.
 }
+
 \usage{
 runBRT(data, gbm.x, gbm.y, pred.raster,
       wt.fun = function(PA) rep(1, length(PA)),
       max_tries = 5, verbose = FALSE, tree.complexity = 4, learning.rate = 0.005,
       bag.fraction = 0.75, n.trees = 10, n.folds = 10,
-      max.trees = 40000, step.size = 10, ...)
+      max.trees = 40000, step.size = 10, step = TRUE, ...)
 }
 
 \arguments{
@@ -48,7 +50,7 @@ Passed to \code{gbm.step}, how small to shrink the contribution of each tree in 
 Passed to \code{gbm.step}, proportion of datapoints used in selecting variables
 }
   \item{n.trees}{
-Passed to \code{gbm.step}, \emph{initial} number of trees to fit.
+Passed to \code{gbm.step}, \emph{initial} number of trees to fit. \code{gbm.step} optimises this parameter.
 }
   \item{n.folds}{
 Passed to \code{gbm.step}, number of folds in each round of cross validation.
@@ -59,6 +61,9 @@ Passed to \code{gbm.step}, maximum number of trees to fit before stopping the st
   \item{step.size}{
 Passed to \code{gbm.step}, number of trees to add at each iteration.
 }
+  \item{step}{
+Whether to run the \code{gbm.step} procedure. If \code{FALSE} a single model is run with {n.trees} trees. Note that using the default value of \code{n.trees = 10} is likely to be a bad move.
+  }
   \item{\dots}{
 Additional functions to pass to \code{gbm.step}.
 }

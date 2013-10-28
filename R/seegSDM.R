@@ -514,7 +514,7 @@ getGAUL <- function (occurrence, admin) {
 }
 
 
-extractAdmin <- function (occurrence, covariates, admin, fun = mean) {
+extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
   
   # get indices for polygons in occurrence
   poly_idx <- which(occurrence$Admin != -999)
@@ -1123,6 +1123,7 @@ biasGrid <- function(polygons, raster, sigma = 30)
   # replace mask
 #   ras <- setValuesIdx(ras, 0, missingIdx(ras))
   ras <- calc(ras, fun = function(x) ifelse(is.na(x), 0, x))
+
 #   ras[missingIdx(ras)] <- 0
   mask(ras, raster)
 }

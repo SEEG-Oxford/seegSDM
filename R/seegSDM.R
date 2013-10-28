@@ -3,36 +3,36 @@
 
 ## TO DOCUMENT
 
-setValuesIdx <- function (raster, values, index, returnSparse = TRUE) {
-  # set values of a RasterLayer with cell numbers in index to values.
-  # make sure it's a RasterLayer or RasterLayerSparse, for fast on-disk editing.
-  
-  cl <- class(raster)
-  
-  if (cl == 'RasterLayer') {
-    raster <- as(raster, 'RasterLayerSparse')
-  } else if (cl != 'RasterLayerSparse') {
-    stop("raster must be of class 'RasterLayer' or 'RasterLayerSparse'")
-  }
-  
-  # repeat values if of length 1
-  if (length(values) == 1) {
-    values <- rep(values, length(index))
-  } else if(length(values) != length(index)) {
-    stop("values must either be of length 1 or the same length as 'index'")
-  }
-  
-  # do setValues
-  raster <- setValues(raster, values, index = index)
-  
-  # if they provided a RasterLayer and don't wan't a sparse one, change it back
-  if (!returnSparse & cl == 'RasterLayer') {
-    raster <- as(raster, 'RasterLayer')
-  }
-  
-  # and return
-  return (raster)
-}
+# setValuesIdx <- function (raster, values, index, returnSparse = TRUE) {
+#   # set values of a RasterLayer with cell numbers in index to values.
+#   # make sure it's a RasterLayer or RasterLayerSparse, for fast on-disk editing.
+#   
+#   cl <- class(raster)
+#   
+#   if (cl == 'RasterLayer') {
+#     raster <- as(raster, 'RasterLayerSparse')
+#   } else if (cl != 'RasterLayerSparse') {
+#     stop("raster must be of class 'RasterLayer' or 'RasterLayerSparse'")
+#   }
+#   
+#   # repeat values if of length 1
+#   if (length(values) == 1) {
+#     values <- rep(values, length(index))
+#   } else if(length(values) != length(index)) {
+#     stop("values must either be of length 1 or the same length as 'index'")
+#   }
+#   
+#   # do setValues
+#   raster <- setValues(raster, values, index = index)
+#   
+#   # if they provided a RasterLayer and don't wan't a sparse one, change it back
+#   if (!returnSparse & cl == 'RasterLayer') {
+#     raster <- as(raster, 'RasterLayer')
+#   }
+#   
+#   # and return
+#   return (raster)
+# }
 
 notMissingIdx <- function(raster) {
   # return an index for the non-missing cells in raster
@@ -986,24 +986,32 @@ extractBhatt <- function (pars,
   # pseudo-presences
   if (np > 0) {
     
-    if (!exists('abs_consensus')) {
-      
-      # if a pseudo-absence consensus layer already exists
-      # then save some computation
-      pres_consensus <- 1 - abs_consensus
-      
-    } else {
-      
-      # otherwise create it from consensus
-      pres_consensus <- (consensus + 100) / 200
-      
-    }
+#     if (!exists('abs_consensus')) {
+#       
+#       # if a pseudo-absence consensus layer already exists
+#       # then save some computation
+#       pres_consensus <- 1 - abs_consensus
+#       
+#     } else {
+#       
+#       # otherwise create it from consensus
+#       pres_consensus <- (consensus + 100) / 200
+#       
+#     }
     
-    # threshold it (set anything below threshold to 0)
-    threshold <- (threshold + 100) / 200
+#     # threshold it (set anything below threshold to 0)
+#     threshold <- (threshold + 100) / 200
+#     
+#     under_threshold_idx <- which(getValues(pres_consensus) <= threshold)
+#     pres_consensus <- setValuesIdx(pres_consensus, 0, index = under_threshold_idx)
     
-    under_threshold_idx <- which(getValues(pres_consensus) <= threshold)
-    pres_consensus <- setValuesIdx(pres_consensus, 0, index = under_threshold_idx)
+    # convert presence consensus to the 0, 1 scale and threshold at 'threshold'
+    pres_consensus <- calc(consensus,
+                           fun = function(x) {
+                             ifelse(x <= threshold,
+                                    0,
+                                    (x + 100) / 200)
+                             })
 #     pres_consensus[pres_consensus <= threshold] <- 0
     
     # sample from it, weighted by consensus (more likely in 100, impossible
@@ -1113,7 +1121,8 @@ biasGrid <- function(polygons, raster, sigma = 30)
   
   
   # replace mask
-  ras <- setValuesIdx(ras, 0, missingIdx(ras))
+#   ras <- setValuesIdx(ras, 0, missingIdx(ras))
+  ras[missingIdx(ras)] <- 0
   mask(ras, raster)
 }
 

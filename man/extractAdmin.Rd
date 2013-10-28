@@ -13,7 +13,7 @@ extractAdmin(occurrence, covariates, admin, fun = mean)
 
 \arguments{
   \item{occurrence}{
-A \code{SpatialPointsDataFrame} of occurrence records containing \emph{at least} a column named \code{Admin} giving the admin level of the polygon (an integer from 0 to 3, or -9999 for point data) and a column named \code{GAUL} giving the GAUL codes for these polygons. This can be added using \code{\link{getGAUL}}.
+A \code{SpatialPointsDataFrame} of occurrence records containing \emph{at least} a column named \code{Admin} giving the admin level of the polygon (an integer from 0 to 3, or -999 for point data) and a column named \code{GAUL} giving the GAUL codes for these polygons. This can be added using \code{\link{getGAUL}}.
 }
   \item{covariates}{
     A \code{Raster*} object giving covariates to use in the model.

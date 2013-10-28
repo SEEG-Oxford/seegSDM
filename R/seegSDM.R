@@ -1,5 +1,52 @@
 # function file for seegSDM package
 
+
+## TO DOCUMENT
+
+setValuesIdx <- function (raster, values, index, returnSparse = TRUE) {
+  # set values of a RasterLayer with cell numbers in index to values.
+  # make sure it's a RasterLayer or RasterLayerSparse, for fast on-disk editing.
+  
+  cl <- class(raster)
+  
+  if (cl == 'RasterLayer') {
+    raster <- as(raster, 'RasterLayerSparse')
+  } else if (cl != 'RasterLayerSparse') {
+    stop("raster must be of class 'RasterLayer' or 'RasterLayerSparse'")
+  }
+  
+  # repeat values if of length 1
+  if (length(values) == 1) {
+    values <- rep(values, length(index))
+  } else if(length(values) != length(index)) {
+    stop("values must either be of length 1 or the same length as 'index'")
+  }
+  
+  # do setValues
+  raster <- setValues(raster, values, index = index)
+  
+  # if they provided a RasterLayer and don't wan't a sparse one, change it back
+  if (!returnSparse & cl == 'RasterLayer') {
+    raster <- as(raster, 'RasterLayer')
+  }
+  
+  # and return
+  return (raster)
+}
+
+notMissingIdx <- function(raster) {
+  # return an index for the non-missing cells in raster
+  which(!is.na(getValues(raster)))
+}
+
+missingIdx <- function(raster) {
+  # return an index for the missing cells in raster
+  which(is.na(getValues(raster)))
+}
+
+## DOCUMENTED
+
+
 # checking inputs
 checkOccurrence <- function(occurrence,
                             consensus,
@@ -58,7 +105,7 @@ checkOccurrence <- function(occurrence,
   
   # if not, stop with a helpful error
   if (!all(classes_match)) {
-
+    
     # list problems
     message_vector <- sapply(which(!classes_match),
                              function(i) paste(names(occurrence)[i],
@@ -79,9 +126,9 @@ checkOccurrence <- function(occurrence,
   
   if (any(bad_admin)) {
     stop (paste('bad Admin codes for records with these UniqueIDs:',
-                 paste(occurrence$UniqueID[bad_admin], collapse = ', ')))
+                paste(occurrence$UniqueID[bad_admin], collapse = ', ')))
   }  
-
+  
   # ~~~~~~~~~~~~~~
   # remove polygons over area limit
   big_polygons <- occurrence$Admin != -999 &
@@ -114,7 +161,7 @@ checkOccurrence <- function(occurrence,
                                          which(outside_mask)),
                               consensus,
                               max_distance)
-
+    
     # replace those coordinates in occurrence
     occurrence[outside_mask, c('Longitude', 'Latitude')] <- new_coords
     
@@ -135,7 +182,7 @@ checkOccurrence <- function(occurrence,
     
     # update outside_mask
     outside_mask[outside_mask] <- still_out
-
+    
     # and remove still-missigng points from occurrence and vals
     occurrence <- occurrence[!outside_mask, , drop = FALSE]
   }
@@ -197,13 +244,13 @@ checkOccurrence <- function(occurrence,
   if (spatial) {
     occurrence <- SpatialPointsDataFrame(cbind(occurrence$Longitude,
                                                occurrence$Latitude),
-                                          occurrence,
-                                          proj4string = wgs84(TRUE))
+                                         occurrence,
+                                         proj4string = wgs84(TRUE))
   }
   
   # return corrected occurrence dataframe/SPDF
   return (occurrence)
-}
+  }
 
 checkRasters <- function (rasters, template, cellbycell = FALSE) {
   
@@ -219,7 +266,7 @@ checkRasters <- function (rasters, template, cellbycell = FALSE) {
   }
   
   if (CRSargs(projection(rasters, asText = FALSE)) !=
-                CRSargs(projection(template, asText = FALSE))) {
+        CRSargs(projection(template, asText = FALSE))) {
     stop('projections do not match, see ?projection')
   }
   
@@ -252,8 +299,8 @@ checkRasters <- function (rasters, template, cellbycell = FALSE) {
       
       if (any(pixel_mismatch)) {
         stop(paste0('mismatches between layers ',
-                   names(rasters)[pixel_mismatch],
-                   ', see ?resample'))
+                    names(rasters)[pixel_mismatch],
+                    ', see ?resample'))
       }
       
     }
@@ -299,25 +346,25 @@ tempStand <- function (occurrence, admin, verbose = TRUE) {
   
   # if no GAUL column
   if (!('GAUL' %in% names(occurrence))) {
-      # add one
-      occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
-      
-      # and tell the user
-      if (verbose) {
-        cat('GAUL column was missing, one has been added using getGAUL.\n\n')
-      }
-
-      # check if any were missed
-      failed_GAUL <- is.na(occurrence$GAUL[occurrence$Admin != -999])
-      
-      # and throw an error if so
-      if (any(failed_GAUL)) {
-        stop (paste(sum(failed_GAUL),
-                    'polygon centroids fell outside the masked area and their
-                    GAUL codes could not be determined. Try using nearestLand
-                    to correct these points.\n\n'))
-      }
-  }
+    # add one
+    occurrence$GAUL <- getGAUL(occurrence2SPDF(occurrence), admin)$GAUL
+    
+    # and tell the user
+    if (verbose) {
+      cat('GAUL column was missing, one has been added using getGAUL.\n\n')
+    }
+    
+    # check if any were missed
+    failed_GAUL <- is.na(occurrence$GAUL[occurrence$Admin != -999])
+    
+    # and throw an error if so
+    if (any(failed_GAUL)) {
+      stop (paste(sum(failed_GAUL),
+                  'polygon centroids fell outside the masked area and their
+                  GAUL codes could not be determined. Try using nearestLand
+                  to correct these points.\n\n'))
+    }
+    }
   
   # expand the dataframe  
   
@@ -347,7 +394,7 @@ tempStand <- function (occurrence, admin, verbose = TRUE) {
   
   # look for polygons
   polys <- df$Admin != -999
-
+  
   # if there are any polygons
   if (any(polys)) {
     # get duplicates (Admin, GAUL and Year all the same)
@@ -362,7 +409,7 @@ tempStand <- function (occurrence, admin, verbose = TRUE) {
     
     # get cell numbers in admin
     nums <- cellFromXY(admin, df[pnts, c('Longitude', 'Latitude')])
-
+    
     # get duplicates (pixel and Year all the same)
     pnt_dup <- duplicated(cbind(nums, df$Year[pnts]))
     duplicated_points <- which(pnts)[pnt_dup]
@@ -371,7 +418,7 @@ tempStand <- function (occurrence, admin, verbose = TRUE) {
   return (list(occurrence = df,
                duplicated_polygons = duplicated_polygons,
                duplicated_points = duplicated_points))
-}
+    }
 
 nearestLand <- function (points, raster, max_distance) {
   # get nearest non_na cells (within a maximum distance) to a set of points
@@ -430,9 +477,9 @@ occurrence2SPDF <- function (occurrence) {
   
   # convert to SPDF
   occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],
-                                occurrence,
-                                coords.nrs  = coord_cols,
-                                proj4string = wgs84(TRUE))
+                                       occurrence,
+                                       coords.nrs  = coord_cols,
+                                       proj4string = wgs84(TRUE))
   return (occurrence)
 }
 
@@ -505,13 +552,17 @@ extractAdmin <- function (occurrence, covariates, admin, fun = mean) {
       level_all_codes <- level_all_codes[-(level_GAULs - ad@data@min + 1)]
       
       # then reclassify ad to mask out the ones we don't want
-      # this should speed up the zonal operation
+      # this *should* speed up the zonal operation
       ad <- reclassify(ad,
                        cbind(level_all_codes,
                              rep(NA, length(level_all_codes))))
       
+      cat('about to do zonal\n')
+      
       # extract values for each zone, aggregating by 'fun'
       zones <- zonal(covariates, ad, fun = fun)
+
+      cat('zonal done\n')
       
       # match them to polygons
       # (accounts for change in order and for duplicates)
@@ -536,7 +587,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     bag.fraction = 0.75, n.trees = 10,
                     n.folds = 10, max.trees = 40000,
                     step.size = 10, step = TRUE, ...)
-
+  
   # wrapper to run a BRT model with Sam's defaults
   # and return covariate effects, relative influence,
   # and a prediction map (on the probability scale).
@@ -545,7 +596,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
 {
   # keep running until model isn't null
   # (can happen with wrong leaning rate etc.)
-
+  
   if (step) {
     # if using gbm.step
     
@@ -583,7 +634,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
     
   } else {
     # if not stepping, run a single BRT with n.trees trees
-  
+    
     m <- gbm(data[, gbm.y] ~ .,
              distribution = 'bernoulli',
              data = data[, gbm.x],
@@ -595,7 +646,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
              weights = wt.fun(data[, gbm.y]),
              ...)
   }
-    
+  
   
   # otherwise return the list of model objects
   # (predict grids, relative influence stats and prediction map)
@@ -694,7 +745,7 @@ getEffectPlots <- function (models,
   names(effects) <- names
   
   if (plot) {
-#     op <- par(mfrow = n2mfrow(ncovs), mar = c(5, 4, 4, 2) + 0.1)
+    #     op <- par(mfrow = n2mfrow(ncovs), mar = c(5, 4, 4, 2) + 0.1)
     for (i in 1:ncovs) {
       eff <- effects[[i]]
       
@@ -725,7 +776,7 @@ getEffectPlots <- function (models,
       }
       
     }
-#     par(op)
+    #     par(op)
   }
   
   return(effects)
@@ -769,7 +820,7 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975),
     stats <- sfLapply(idxs,
                       function(idx, dat, quants) {
                         getStats(dat[idx[1]:idx[2], ], quants)
-                        },
+                      },
                       dat, quantiles)
     
     stats <- do.call(rbind, stats)
@@ -832,9 +883,9 @@ bgSample <- function(raster,
   # is assumed to be a bias grid and points sampled accordingly. If 'sp = TRUE'
   # a SpatialPoints* object is returned, else a matrix of coordinates
 {
-  pixels <- which(!is.na(raster[]))
+  pixels <- notMissingIdx(raster)  # which(!is.na(getValues(raster)))
   if (prob) {
-    prob <- raster[pixels]
+    prob <- getValues(raster)[pixels]
   } else {
     prob <- NULL
   }
@@ -916,7 +967,7 @@ extractBhatt <- function (pars,
   
   # pseudo-absences
   if (na > 0) {
-
+    
     # modify the consensus layer (-100:100) to probability scale (0, 1)
     abs_consensus <- 1 - (consensus + 100) / 200
     
@@ -929,12 +980,12 @@ extractBhatt <- function (pars,
   } else {
     
     p_abs <- p_abs_data <- NULL
-
+    
   }
   
   # pseudo-presences
   if (np > 0) {
-
+    
     if (!exists('abs_consensus')) {
       
       # if a pseudo-absence consensus layer already exists
@@ -950,7 +1001,10 @@ extractBhatt <- function (pars,
     
     # threshold it (set anything below threshold to 0)
     threshold <- (threshold + 100) / 200
-    pres_consensus[pres_consensus <= threshold] <- 0
+    
+    under_threshold_idx <- which(getValues(pres_consensus) <= threshold)
+    pres_consensus <- setValuesIdx(pres_consensus, 0, index = under_threshold_idx)
+#     pres_consensus[pres_consensus <= threshold] <- 0
     
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
@@ -965,7 +1019,7 @@ extractBhatt <- function (pars,
   }
   
   # extract covariates for occurrence and add presence label
-
+  
   # create an empty matrix for th occurrence covariate records
   occ_covs <- matrix(NA,
                      nrow = nrow(occurrence),
@@ -976,7 +1030,7 @@ extractBhatt <- function (pars,
   
   # find points
   points <- occurrence$Admin == -999
-
+  
   # if there are points
   if (any(points)) {
     # extract and add to the results
@@ -986,13 +1040,13 @@ extractBhatt <- function (pars,
   # if there are any polygons
   if (any(!points)) {
     # extract them, but treat factors and non-factors differently
-
+    
     if (any(factor)) {
       # if there are any factors, get mode of polygon
       occ_covs[!points, factor] <- extractAdmin(occurrence,
-                                                 covariates[[which(factor)]],
-                                                 admin,
-                                                 fun = modal)
+                                                covariates[[which(factor)]],
+                                                admin,
+                                                fun = modal)
     }
     if (any(!factor)) {
       # if there are any continuous, get mean of polygon
@@ -1019,7 +1073,7 @@ extractBhatt <- function (pars,
       all_data[, i + 1] <- factor(all_data[, i + 1])
     }
   }
-
+  
   # return list with the dataframe and possibly the SpatialPoints objects
   
   if (return_points) {
@@ -1038,8 +1092,10 @@ biasGrid <- function(polygons, raster, sigma = 30)
   # create a bias grid from polygons using a gaussian moving window smoother
   # sigma is given in the units of the projection
 {
+  # duplicate a blank raster
   ras <- raster
-  ras[] <- 0
+  ras <- setValues(ras, 0)
+  
   # weighted occurrence raster (areas for polys roughly sum to 1)
   areas <- sapply(polygons@polygons, function(x) {
     x@Polygons[[1]]@area
@@ -1054,8 +1110,10 @@ biasGrid <- function(polygons, raster, sigma = 30)
                                  w = w / sum(w),
                                  pad = TRUE,
                                  na.rm = TRUE)))
+  
+  
   # replace mask
-  ras[is.na(ras[])] <- 0
+  ras <- setValuesIdx(ras, 0, missingIdx(ras))
   mask(ras, raster)
 }
 
@@ -1282,7 +1340,7 @@ featureDensity <- function(feature, raster, weights = 1, ...) {
   # so these can take any value those can. 'weights' can be a single value,
   # a vector of the correct length, or the name of a field if 'feature'
   # is a Spatial*DataFrame.
-
+  
   # set raster values to 0
   raster <- raster * 0
   #   raster[!is.na(raster[])] <- 0
@@ -1342,7 +1400,7 @@ percCover <- function(raster, template, points, codes)
   # identified by points. dropna drops raster2 cells with all na values
 {
   pointras <- rasterize(points, template, mask = TRUE)
-#   polys <- pixels2polys(pointras)
+  #   polys <- pixels2polys(pointras)
   polys <- rasterToPolygons(pointras)
   extr <- extract(raster, polys)
   cover <- function(x) sapply(codes, function(i, x) mean(x == i, na.rm = TRUE), x)

@@ -1054,14 +1054,14 @@ extractBhatt <- function (pars,
       occ_covs[!points, factor] <- extractAdmin(occurrence,
                                                 covariates[[which(factor)]],
                                                 admin,
-                                                fun = modal)
+                                                fun = 'modal')
     }
     if (any(!factor)) {
       # if there are any continuous, get mean of polygon
       occ_covs[!points, !factor] <- extractAdmin(occurrence,
                                                  covariates[[which(!factor)]],
                                                  admin,
-                                                 fun = mean)
+                                                 fun = 'mean')
       
     }
   }

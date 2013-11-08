@@ -619,6 +619,9 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     max.trees = max.trees,
                     plot.main = FALSE,
                     site.weights = wt.fun(data[, gbm.y]),
+                    keep.fold.models = TRUE, 
+                    keep.fold.vector = TRUE,
+                    keep.fold.fit = TRUE,
                     ...)
       
       # add one to the tries counter

@@ -44,6 +44,114 @@ missingIdx <- function(raster) {
   which(is.na(getValues(raster)))
 }
 
+
+
+
+
+# calculate statistics for one fold
+calcStats <- function (df) {
+  
+  # need to add pariwise distance ampling procedure!
+  
+  # add an id column for PresenceAbsence
+  df <- data.frame(id = 1:nrow(df), df)
+  
+  # calculate 'optimum' threshold (sens/spec tradeoff)
+  opt <- optimal.thresholds(df,
+                            threshold = 101,
+                            which.model = 1,
+                            opt.methods = 3)
+  
+  # calculate a confusion matrix using this threshold
+  confusion <- cmx(df, threshold = opt[1,2])
+  
+  # calculate different scores
+  kappa <- Kappa(confusion, st.dev = TRUE)
+  auc <- auc(df, st.dev = TRUE)
+  sens <- sensitivity(confusion, st.dev = TRUE)
+  spec <- specificity(confusion, st.dev = TRUE)
+  pcc <- pcc(confusion, st.dev = TRUE)
+  
+  results <- c(
+    # save scores
+    kappa = kappa[, 1],
+    auc = auc[, 1],
+    sens = sens[, 1],
+    spec = spec[, 1],
+    pcc = pcc[, 1],
+    
+    # standard error values
+    kappa_se = kappa[, 2],
+    auc_se =auc[, 2],
+    sens_se = sens[, 2],
+    spec_se = spec[, 2],
+    pcc_se = pcc[, 2],
+    
+    # and the optimal threshold
+    thresh = opt[1, 2]
+  )
+  
+  return (results)  
+}
+
+# get the mean cv stats for one model run
+getStats <- function (object) {
+  
+  #   # if the names for the first element match those for a single runBRT output
+  #   if (all(names(object[[1]]) == c('model', 'effects', 'relinf', 'pred'))) {
+  #     
+  #   # recursively get the statistics for each element
+  #     table <- t(sapply(object, getStats))
+  #     
+  #   # and return a table (ignores the rest of the function)
+  #     return (table)
+  #   }
+  
+  # get the sub models comprising the model fit
+  models <- object$model$fold.models
+  
+  # get the number of folds
+  n.folds <- length(models)
+  
+  
+  # get weird x and x  order objects
+  x <- object$model$data$x
+  x.order <- object$model$data$x.order
+  
+  # unpack the weird storage system to get a dataframe
+  x.data <- as.data.frame(lapply(1:ncol(x.order),
+                                 function(i, x.order, x) {
+                                   idx <- (i - 1) * nrow(x.order) + x.order[, i] + 1
+                                   return (x[idx])
+                                 }, x.order, x))
+  # rename them
+  names(x.data) <- colnames(x.order)
+  
+  # get the y data too
+  data <- data.frame(PA = object$model$data$y,
+                     x.data)
+  
+  # get the cv datasets
+  cv_data <- lapply(1:n.folds,
+                    function(i, data, fold.vector) data[fold.vector == i, ],
+                    data,
+                    object$model$fold.vector)
+  
+  
+  # predict to the witheld data
+  preds <- lapply(1:n.folds, function(i, models, cv_data) {
+    data.frame(PA = cv_data[[i]]$PA,
+               pred = predict(models[[i]],
+                              cv_data[[i]],
+                              type = 'response',
+                              n.trees = models[[i]]$n.trees))
+  }, models, cv_data)
+  
+  stats <- t(sapply(preds, calcStats))
+  
+  return (colMeans(stats))
+}
+
 ## DOCUMENTED
 
 

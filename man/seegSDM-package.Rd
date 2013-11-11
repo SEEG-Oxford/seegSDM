@@ -15,7 +15,7 @@ Package: \tab seegSDM\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
 Date: \tab 2013-10-21\cr
-License: \tab What license is it under?\cr
+License: \tab GPL(>=2)\cr
 }
 Functions are provided to assist with the seeg SDM workflow:
 \enumerate{

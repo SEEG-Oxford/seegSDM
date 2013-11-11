@@ -79,11 +79,11 @@ calcStats <- function (df) {
     pcc = pcc[, 1],
     
     # standard error values
-    kappa_se = kappa[, 2],
-    auc_se =auc[, 2],
-    sens_se = sens[, 2],
-    spec_se = spec[, 2],
-    pcc_se = pcc[, 2],
+    kappa_sd = kappa[, 2],
+    auc_sd = auc[, 2],
+    sens_sd = sens[, 2],
+    spec_sd = spec[, 2],
+    pcc_sd = pcc[, 2],
     
     # and the optimal threshold
     thresh = opt[1, 2]

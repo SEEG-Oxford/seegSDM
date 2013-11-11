@@ -46,8 +46,6 @@ missingIdx <- function(raster) {
 
 
 
-
-
 # calculate statistics for one fold
 calcStats <- function (df) {
   
@@ -112,7 +110,6 @@ getStats <- function (object) {
   
   # get the number of folds
   n.folds <- length(models)
-  
   
   # get weird x and x  order objects
   x <- object$model$data$x

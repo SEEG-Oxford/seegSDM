@@ -39,6 +39,10 @@ library(devtools)
 library(seegSDM)
 ```
 
+```
+## Warning: package 'dismo' was built under R version 3.0.2
+```
+
 
 
 ### <a id="load"></a>Loading data
@@ -55,13 +59,13 @@ head(occurrence)
 ```
 
 ```
-##   UniqueID Admin Year     x     y Area
-## 1        1 -9999 1990 -6.15 -4.75   NA
-## 2        2 -9999 2013 -4.65  5.05   NA
-## 3        3 -9999 2009  2.65 -2.95   NA
-## 4        4 -9999 1992 -5.35  5.05   NA
-## 5        5 -9999 2008 -6.95 13.35   NA
-## 6        6 -9999 1999 -9.75  3.75   NA
+##   UniqueID Admin Year Longitude Latitude Area
+## 1        1  -999 1990     -6.15    -4.75   NA
+## 2        2  -999 2013     -4.65     5.05   NA
+## 3        3  -999 2009      2.65    -2.95   NA
+## 4        4  -999 1992     -5.35     5.05   NA
+## 5        5  -999 2008     -6.95    13.35   NA
+## 6        6  -999 1999     -9.75     3.75   NA
 ```
 
 
@@ -191,6 +195,13 @@ set.seed(1)
 # run extractBhatt, defining the last covariate as a factor
 lis <- extractBhatt(c(2, 1, 5), occ, covariates, consensus, admin, factor = c(FALSE, 
     FALSE, TRUE), return_points = TRUE)
+```
+
+```
+## about to do zonal
+## zonal done
+## about to do zonal
+## zonal done
 ```
 
 
@@ -466,9 +477,9 @@ relinf
 
 ```
 ##         mean   2.5% 97.5%
-## cov_b 66.883 53.790 77.57
-## cov_a 27.160 16.635 40.33
-## cov_c  5.957  2.428 11.24
+## cov_a 66.039 57.949 74.88
+## cov_b 27.239 17.831 38.14
+## cov_c  6.722  3.173 12.63
 ```
 
 
@@ -483,7 +494,7 @@ effect <- getEffectPlots(model_list, plot = TRUE)
 ![plot of chunk unnamed-chunk-24](figure/unnamed-chunk-24.png) 
 
 
-`combinePreds` combines the prediction maps (on the probability scale) from multiple models and returns rasters giving the mean and quantiles of the ensemble predictions. unlike the previous two functions, `combinePreds` needs a `RasterBrick` or `RasterStack` object with each layers giving a single prediction. So we need to create one of these before we can use `combinePreds`. Note that we can also run `combinePreds` in parallel to save some time if the rasters are particularly large.
+`combinePreds` combines the prediction maps (on the probability scale) from multiple models and returns rasters giving the mean, median and quantiles of the ensemble predictions. unlike the previous two functions, `combinePreds` needs a `RasterBrick` or `RasterStack` object with each layers giving a single prediction. So we need to create one of these before we can use `combinePreds`. Note that we can also run `combinePreds` in parallel to save some time if the rasters are particularly large.
 
 
 ```r
@@ -507,7 +518,7 @@ We can create a simple map of prediction uncertainty by subtracting the lower fr
 
 ```r
 # calculate uncertainty
-preds$uncertainty <- preds$upper - preds$lower
+preds$uncertainty <- preds[[4]] - preds[[3]]
 
 # plot mean and uncertainty
 par(mfrow = c(1, 2))

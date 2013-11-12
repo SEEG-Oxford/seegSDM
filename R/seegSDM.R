@@ -2,7 +2,6 @@
 
 
 ## TO DOCUMENT
-
 # setValuesIdx <- function (raster, values, index, returnSparse = TRUE) {
 #   # set values of a RasterLayer with cell numbers in index to values.
 #   # make sure it's a RasterLayer or RasterLayerSparse, for fast on-disk editing.
@@ -890,60 +889,28 @@ getEffectPlots <- function (models,
   return(effects)
 }
 
-combinePreds <- function (preds, quantiles = c(0.025, 0.975),
-                          parallel = FALSE, maxn = NULL)
-  # function to calculate means and quantiles for each cell, given a
-  # rasterBrick or rasterStack where each layer is a single ensemble
-  # prediction. If a snowfall cluster is running, 'parallel = TRUE'
-  # sets the function to run in parallel. 'maxn' gives the maximum number
-  # of cells in each batch. If NULL this is set to fill all the cpus once.
+combinePreds <- function (preds, quantiles = c(0.025, 0.975))
+  # function to calculate mean, median and quantile raster layers for
+  # ensemble predictions given a rasterBrick or rasterStack where each
+  # layer is a single ensemble prediction.
 {
-  # function to get mean and quantiles
-  getStats <- function (x, quants) {
-    if (nrow(x) == 1) c(mean(x), quantile(x, quants, na.rm = TRUE))
-    else cbind(mean = rowMeans(x),
-               t(apply(x, 1, quantile, quants, na.rm = TRUE)))
+
+  # function to get mean, median and quantiles
+  combine <- function (x) {
+    ans <- c(mean = mean(x),
+             median = median(x),
+             quantile(x, quantiles, na.rm = TRUE))
+    return (ans)
   }
   
   stopifnot(nlayers(preds) > 1)
   
-  # extract data to RAM and find non-NA values
-  alldata <- getValues(preds)
-  nas <- is.na(alldata[, 1])
-  dat <- alldata[!nas, ]
+  ans <- calc(preds, fun = combine)
   
-  if (parallel) {
-    
-    n <- nrow(dat)
-    cpu <- sfCpus()
-    stopifnot(cpu > 1)
-    
-    if (is.null(maxn)) {
-      maxn <- n %/% cpu + ifelse(n %% cpu > 0, 1, 0)
-    }
-    
-    # split up dat
-    idxs <- splitIdx(n, maxn)
-    # get stats in parallel
-    stats <- sfLapply(idxs,
-                      function(idx, dat, quants) {
-                        getStats(dat[idx[1]:idx[2], ], quants)
-                      },
-                      dat, quantiles)
-    
-    stats <- do.call(rbind, stats)
-    
-  } else {
-    
-    stats <- getStats(dat, quants = quantiles)
-    
-  }
-  
-  if (nlayers(preds) < 3) ans <- brick(preds[[1]], preds[[1]], preds[[1]])
-  else ans <- preds[[1:3]]
-  ans[!nas, ] <- stats
-  names(ans) <- c('mean', 'lower', 'upper')  
-  ans
+  names(ans)[3:nlayers(ans)] <- paste0('quantile_', quantiles)
+
+  return(ans)
+
 }
 
 rmse <- function(truth, prediction)

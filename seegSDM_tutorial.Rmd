@@ -294,7 +294,7 @@ par(mfrow = c(1, 3))
 effect <- getEffectPlots(model_list, plot = TRUE)
 ```
 
-`combinePreds` combines the prediction maps (on the probability scale) from multiple models and returns rasters giving the mean and quantiles of the ensemble predictions. unlike the previous two functions, `combinePreds` needs a `RasterBrick` or `RasterStack` object with each layers giving a single prediction. So we need to create one of these before we can use `combinePreds`. Note that we can also run `combinePreds` in parallel to save some time if the rasters are particularly large.
+`combinePreds` combines the prediction maps (on the probability scale) from multiple models and returns rasters giving the mean, median and quantiles of the ensemble predictions. unlike the previous two functions, `combinePreds` needs a `RasterBrick` or `RasterStack` object with each layers giving a single prediction. So we need to create one of these before we can use `combinePreds`. Note that we can also run `combinePreds` in parallel to save some time if the rasters are particularly large.
 
 ```{r fig.width = 9, fig.height = 8}
 # lapply to extract the predictions into a list
@@ -313,7 +313,7 @@ We can create a simple map of prediction uncertainty by subtracting the lower fr
 
 ```{r fig.width = 10, fig.height = 5.5}
 # calculate uncertainty
-preds$uncertainty <- preds$upper - preds$lower
+preds$uncertainty <- preds[[4]] - preds[[3]]
 
 # plot mean and uncertainty
 par(mfrow = c(1, 2))

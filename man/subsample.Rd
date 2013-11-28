@@ -8,7 +8,7 @@ Sample a random subset of a dataframe containing presence and absence data
 Extract a random subset of \code{n} records from \code{data}, ensuring that there are at least \code{minimum} presence and absence records in the subset. The presence/absence column is identified by \code{prescol}.
 }
 \usage{
-subsample(data, n, minimum = c(5, 5), prescol = 1, replace = FALSE)
+subsample(data, n, minimum = c(5, 5), prescol = 1, replace = FALSE, max_tries = 10)
 }
 
 \arguments{
@@ -26,6 +26,9 @@ An integer giving the column number for the presence/absence code (containing 1s
 }
   \item{replace}{
 Whether to sample with replacement.
+}
+  \item{max_tries}{
+How many times to try the subsampling with minimum number of presences and absences before stopping with an error.
 }
 }
 \value{

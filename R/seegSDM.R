@@ -2,36 +2,6 @@
 
 
 ## TO DOCUMENT
-# setValuesIdx <- function (raster, values, index, returnSparse = TRUE) {
-#   # set values of a RasterLayer with cell numbers in index to values.
-#   # make sure it's a RasterLayer or RasterLayerSparse, for fast on-disk editing.
-#   
-#   cl <- class(raster)
-#   
-#   if (cl == 'RasterLayer') {
-#     raster <- as(raster, 'RasterLayerSparse')
-#   } else if (cl != 'RasterLayerSparse') {
-#     stop("raster must be of class 'RasterLayer' or 'RasterLayerSparse'")
-#   }
-#   
-#   # repeat values if of length 1
-#   if (length(values) == 1) {
-#     values <- rep(values, length(index))
-#   } else if(length(values) != length(index)) {
-#     stop("values must either be of length 1 or the same length as 'index'")
-#   }
-#   
-#   # do setValues
-#   raster <- setValues(raster, values, index = index)
-#   
-#   # if they provided a RasterLayer and don't wan't a sparse one, change it back
-#   if (!returnSparse & cl == 'RasterLayer') {
-#     raster <- as(raster, 'RasterLayer')
-#   }
-#   
-#   # and return
-#   return (raster)
-# }
 
 notMissingIdx <- function(raster) {
   # return an index for the non-missing cells in raster
@@ -44,65 +14,56 @@ missingIdx <- function(raster) {
 }
 
 
-
-# calculate statistics for one fold
-calcStats <- function (df) {
-  
-  # need to add pariwise distance ampling procedure!
-  
-  # add an id column for PresenceAbsence
-  df <- data.frame(id = 1:nrow(df), df)
-  
-  # calculate 'optimum' threshold (sens/spec tradeoff)
-  opt <- optimal.thresholds(df,
-                            threshold = 101,
-                            which.model = 1,
-                            opt.methods = 3)
-  
-  # calculate a confusion matrix using this threshold
-  confusion <- cmx(df, threshold = opt[1,2])
-  
-  # calculate different scores
-  kappa <- Kappa(confusion, st.dev = TRUE)
-  auc <- auc(df, st.dev = TRUE)
-  sens <- sensitivity(confusion, st.dev = TRUE)
-  spec <- specificity(confusion, st.dev = TRUE)
-  pcc <- pcc(confusion, st.dev = TRUE)
-  
-  results <- c(
-    # save scores
-    kappa = kappa[, 1],
-    auc = auc[, 1],
-    sens = sens[, 1],
-    spec = spec[, 1],
-    pcc = pcc[, 1],
-    
-    # standard error values
-    kappa_sd = kappa[, 2],
-    auc_sd = auc[, 2],
-    sens_sd = sens[, 2],
-    spec_sd = spec[, 2],
-    pcc_sd = pcc[, 2],
-    
-    # and the optimal threshold
-    thresh = opt[1, 2]
-  )
-  
-  return (results)  
-}
+## DOCUMENTED
 
 # get the mean cv stats for one model run
 getStats <- function (object) {
   
-  #   # if the names for the first element match those for a single runBRT output
-  #   if (all(names(object[[1]]) == c('model', 'effects', 'relinf', 'pred'))) {
-  #     
-  #   # recursively get the statistics for each element
-  #     table <- t(sapply(object, getStats))
-  #     
-  #   # and return a table (ignores the rest of the function)
-  #     return (table)
-  #   }
+  # calculate statistics for one fold
+  calcStats <- function (df) {
+    
+    # need to add pariwise distance ampling procedure!
+    
+    # add an id column for PresenceAbsence
+    df <- data.frame(id = 1:nrow(df), df)
+    
+    # calculate 'optimum' threshold (sens/spec tradeoff)
+    opt <- optimal.thresholds(df,
+                              threshold = 101,
+                              which.model = 1,
+                              opt.methods = 3)
+    
+    # calculate a confusion matrix using this threshold
+    confusion <- cmx(df, threshold = opt[1,2])
+    
+    # calculate different scores
+    kappa <- Kappa(confusion, st.dev = TRUE)
+    auc <- auc(df, st.dev = TRUE)
+    sens <- sensitivity(confusion, st.dev = TRUE)
+    spec <- specificity(confusion, st.dev = TRUE)
+    pcc <- pcc(confusion, st.dev = TRUE)
+    
+    results <- c(
+      # save scores
+      kappa = kappa[, 1],
+      auc = auc[, 1],
+      sens = sens[, 1],
+      spec = spec[, 1],
+      pcc = pcc[, 1],
+      
+      # standard error values
+      kappa_sd = kappa[, 2],
+      auc_sd = auc[, 2],
+      sens_sd = sens[, 2],
+      spec_sd = spec[, 2],
+      pcc_sd = pcc[, 2],
+      
+      # and the optimal threshold
+      thresh = opt[1, 2]
+    )
+    
+    return (results)  
+  }
   
   # get the sub models comprising the model fit
   models <- object$model$fold.models
@@ -147,9 +108,6 @@ getStats <- function (object) {
   
   return (colMeans(stats))
 }
-
-## DOCUMENTED
-
 
 # checking inputs
 checkOccurrence <- function(occurrence,
@@ -708,7 +666,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
     m <- NULL
     tries <- 0
     
-    # try 5 times
+    # try 'tries' times
     while (is.null(m) & tries < max_tries) {
       # fit the model, if it fails m will be NULL and the loop will continue
       m <- gbm.step(data = data,
@@ -929,13 +887,16 @@ subsample <- function (data,
                        n,
                        minimum = c(5, 5),
                        prescol = 1,
-                       replace = FALSE) {
+                       replace = FALSE,
+                       max_tries = 10) {
   # get a random subset of 'n' records from 'data', ensuring that there
   # are at least 'minimum[1]' presences and 'minimum[2]' absences.
   # assumes by default that presence/absence code is in column 1 ('prescol')
   OK <- FALSE
-  # until criteria are met
-  while (!OK) {
+  tries <- 0
+  
+  # until criteria are met or tried enough times
+  while (!OK & tries < max_tries) {
     # take a subsample
     sub <- data[sample(1:nrow(data), n, replace = replace), ]
     # count presences and absences
@@ -945,7 +906,17 @@ subsample <- function (data,
     if (npres >= minimum[1] & nabs >= minimum[2]) {
       OK <- TRUE
     }
+    tries <- tries + 1
   }
+  
+  # if the number of tr=ies maxed out, throuw an error
+  if (tries >= max_tries) {
+    stop (paste('Stopped after',
+                max_tries,
+                'attempts,
+                try changing the minimum number of presence and absence points'))
+  }
+  
   return (sub)
 }
 

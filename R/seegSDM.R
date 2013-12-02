@@ -13,6 +13,82 @@ missingIdx <- function(raster) {
   which(is.na(getValues(raster)))
 }
 
+# clone of the auc function in PresenceAbsence
+# but without the shocking
+auc2 <- function (DATA,
+                  st.dev = TRUE,
+                  which.model = 1,
+                  na.rm = FALSE) {
+  if (is.logical(st.dev) == FALSE) {
+    stop("'st.dev' must be of logical type")
+  }
+  if (is.logical(na.rm) == FALSE) {
+    stop("'na.rm' must be of logical type")
+  }
+  if (sum(is.na(DATA)) > 0) {
+    if (na.rm == TRUE) {
+      NA.rows <- apply(is.na(DATA), 1, sum)
+      warning(length(NA.rows[NA.rows > 0]), " rows ignored due to NA values")
+      DATA <- DATA[NA.rows == 0, ]
+    }
+    else {
+      return(NA)
+    }
+  }
+  if (length(which.model) != 1) {
+    stop("this function will only work for a single model, 'which.model' must be of length one")
+  }
+  if (which.model < 1 || round(which.model) != which.model) {
+    stop("'which.model' must be a positive integer")
+  }
+  if (which.model + 2 > ncol(DATA)) {
+    stop("'which.model' must not be greater than number of models in DATA")
+  }
+  DATA <- DATA[, c(1, 2, which.model + 2)]
+  DATA[DATA[, 2] > 0, 2] <- 1
+  OBS <- DATA[, 2]
+  PRED <- DATA[, 3]
+  if (length(OBS[OBS == 1]) == 0 || length(OBS[OBS == 1]) == 
+        nrow(DATA)) {
+    if (st.dev == FALSE) {
+      return(NaN)
+    }
+    else {
+      return(data.frame(AUC = NaN, AUC.sd = NaN))
+    }
+  }
+  rm(DATA)
+  PRED.0 <- PRED[OBS == 0]
+  PRED.1 <- PRED[OBS == 1]
+  N <- length(PRED)
+  n0 <- as.double(length(PRED.0))
+  n1 <- as.double(length(PRED.1))
+  R <- rank(PRED, ties.method = "average")
+  R0 <- R[OBS == 0]
+  R1 <- R[OBS == 1]
+  U <- n0 * n1 + (n0 * (n0 + 1))/2 - sum(R0)
+  AUC <- U/(n0 * n1)
+  
+  # this line turns terrible predictions.
+  # deleted because JESUS. CHRIST.
+  #   AUC[AUC < 0.5] <- 1 - AUC
+  rm(PRED)
+  rm(OBS)
+  if (st.dev == FALSE) {
+    return(AUC = AUC)
+  }
+  else {
+    RR0 <- rank(PRED.0, ties.method = "average")
+    RR1 <- rank(PRED.1, ties.method = "average")
+    pless.0 <- (R0 - RR0)/n1
+    pless.1 <- (R1 - RR1)/n0
+    var.0 <- var(pless.0)
+    var.1 <- var(pless.1)
+    var.AUC <- (var.0/n0) + (var.1/n1)
+    st.dev.AUC <- var.AUC^0.5
+    return(data.frame(AUC = AUC, AUC.sd = st.dev.AUC))
+  }
+}
 
 ## DOCUMENTED
 
@@ -38,7 +114,8 @@ getStats <- function (object) {
     
     # calculate different scores
     kappa <- Kappa(confusion, st.dev = TRUE)
-    auc <- auc(df, st.dev = TRUE)
+    # use auc2 instead of aucion the PresenceAbsence package
+    auc <- auc2(df, st.dev = TRUE)
     sens <- sensitivity(confusion, st.dev = TRUE)
     spec <- specificity(confusion, st.dev = TRUE)
     pcc <- pcc(confusion, st.dev = TRUE)

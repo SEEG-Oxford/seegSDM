@@ -120,9 +120,11 @@ calcStats <- function(df) {
 
 ## DOCUMENTED
 
-# get the mean *cv* stats for one model run
+# get the mean stats for one model run either for the training data
+# (if 'cv = FALSE') or as the mean of the statistics for the k-fold
+# cross-validation statistics
 getStats <- 
-  function (object) 
+  function (object, cv = TRUE) 
   {
     models <- object$model$fold.models
     n.folds <- length(models)
@@ -138,6 +140,21 @@ getStats <-
     x.data <- data.frame(x.data)
     # and give them back their names
     names(x.data) <- colnames(object$model$data$x.order)
+    
+    # if the overall training validation stats are required
+    if (!cv) {
+      # predicted probabilities 
+      pred <- predict(object,
+                      x.data,
+                      n.trees = object$n.trees,
+                      type = 'response')
+      
+      stats <- calcStats(data.frame(y.data,
+                                    pred))
+      
+      return (stats)
+    }
+    
     # get fold vector
     fold_vec <- object$model$fold.vector
     

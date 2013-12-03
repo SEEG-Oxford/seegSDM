@@ -143,7 +143,7 @@ getStats <-
     if (!cv) {
       
       model <- object$model
-      
+
       # predicted probabilities 
       pred <- predict(model,
                       x.data,

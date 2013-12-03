@@ -90,101 +90,84 @@ auc2 <- function (DATA,
   }
 }
 
+# calculate range of validation statistics for fitted models
+# df is a dat.frame or matrix containing observed 0 or 1 data in
+# the first column and (0, 1] predictions in the second
+calcStats <- function(df) {
+  df <- data.frame(id = 1:nrow(df), df)
+  opt <- optimal.thresholds(df, threshold = 101, which.model = 1, 
+                            opt.methods = 3)
+  confusion <- cmx(df, threshold = opt[1, 2])
+  kappa <- Kappa(confusion, st.dev = TRUE)
+  auc <- seegSDM::auc2(df, st.dev = TRUE)
+  sens <- sensitivity(confusion, st.dev = TRUE)
+  spec <- specificity(confusion, st.dev = TRUE)
+  pcc <- pcc(confusion, st.dev = TRUE)
+  results <- c(kappa = kappa[, 1],
+               auc = auc[, 1],
+               sens = sens[, 1],
+               spec = spec[, 1],
+               pcc = pcc[, 1],
+               kappa_sd = kappa[, 2],
+               auc_sd = auc[, 2],
+               sens_sd = sens[, 2],
+               spec_sd = spec[, 2],
+               pcc_sd = pcc[, 2],
+               thresh = opt[1, 2])
+  return(results)
+}
+
+
 ## DOCUMENTED
 
-# get the mean cv stats for one model run
-getStats <- function (object) {
-  
-  # calculate statistics for one fold
-  calcStats <- function (df) {
+# get the mean *cv* stats for one model run
+getStats <- 
+  function (object) 
+  {
+    models <- object$model$fold.models
+    n.folds <- length(models)
     
-    # need to add pariwise distance ampling procedure!
+    # get observed data
+    y.data <- object$model$data$y
     
-    # add an id column for PresenceAbsence
-    df <- data.frame(id = 1:nrow(df), df)
+    # squish covariates back into a matrix
+    x.data <- matrix(object$model$data$x,
+                     nrow = length(y.data))
     
-    # calculate 'optimum' threshold (sens/spec tradeoff)
-    opt <- optimal.thresholds(df,
-                              threshold = 101,
-                              which.model = 1,
-                              opt.methods = 3)
+    # then coerce to a dataframe
+    x.data <- data.frame(x.data)
+    # and give them back their names
+    names(x.data) <- colnames(object$model$data$x.order)
+    # get fold vector
+    fold_vec <- object$model$fold.vector
     
-    # calculate a confusion matrix using this threshold
-    confusion <- cmx(df, threshold = opt[1,2])
+    # blank list to populate
+    preds <- list()
     
-    # calculate different scores
-    kappa <- Kappa(confusion, st.dev = TRUE)
-    # use auc2 instead of aucion the PresenceAbsence package
-    auc <- auc2(df, st.dev = TRUE)
-    sens <- sensitivity(confusion, st.dev = TRUE)
-    spec <- specificity(confusion, st.dev = TRUE)
-    pcc <- pcc(confusion, st.dev = TRUE)
-    
-    results <- c(
-      # save scores
-      kappa = kappa[, 1],
-      auc = auc[, 1],
-      sens = sens[, 1],
-      spec = spec[, 1],
-      pcc = pcc[, 1],
+    # loop through the folds
+    for (i in 1:n.folds) {
       
-      # standard error values
-      kappa_sd = kappa[, 2],
-      auc_sd = auc[, 2],
-      sens_sd = sens[, 2],
-      spec_sd = spec[, 2],
-      pcc_sd = pcc[, 2],
+      # fold-specific mask
+      mask <- fold_vec == i
       
-      # and the optimal threshold
-      thresh = opt[1, 2]
-    )
+      # predicted probabilities for that model 
+      pred <- predict.gbm(models[[i]],
+                          x.data[mask, ],
+                          n.trees = models[[i]]$n.trees,
+                          type = 'response')
+      
+      # add an evaluation dataframe to list
+      preds[[i]] <- data.frame(y.data[mask],
+                               pred)
+      
+    }
     
-    return (results)  
+    # calculate cv statistics for all folds
+    stats <- t(sapply(preds, calcStats))
+    
+    # return the mean of these
+    return(colMeans(stats))
   }
-  
-  # get the sub models comprising the model fit
-  models <- object$model$fold.models
-  
-  # get the number of folds
-  n.folds <- length(models)
-  
-  # get weird x and x  order objects
-  x <- object$model$data$x
-  x.order <- object$model$data$x.order
-  
-  # unpack the weird storage system to get a dataframe
-  x.data <- as.data.frame(lapply(1:ncol(x.order),
-                                 function(i, x.order, x) {
-                                   idx <- (i - 1) * nrow(x.order) + x.order[, i] + 1
-                                   return (x[idx])
-                                 }, x.order, x))
-  # rename them
-  names(x.data) <- colnames(x.order)
-  
-  # get the y data too
-  data <- data.frame(PA = object$model$data$y,
-                     x.data)
-  
-  # get the cv datasets
-  cv_data <- lapply(1:n.folds,
-                    function(i, data, fold.vector) data[fold.vector == i, ],
-                    data,
-                    object$model$fold.vector)
-  
-  
-  # predict to the witheld data
-  preds <- lapply(1:n.folds, function(i, models, cv_data) {
-    data.frame(PA = cv_data[[i]]$PA,
-               pred = predict(models[[i]],
-                              cv_data[[i]],
-                              type = 'response',
-                              n.trees = models[[i]]$n.trees))
-  }, models, cv_data)
-  
-  stats <- t(sapply(preds, calcStats))
-  
-  return (colMeans(stats))
-}
 
 # checking inputs
 checkOccurrence <- function(occurrence,

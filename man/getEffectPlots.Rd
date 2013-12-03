@@ -6,7 +6,7 @@ Combine effect plots for ensemble BRT runs
 }
 
 \description{
-Given \code{models}, a list of BRT model bootstraps (each element an output from \code{\link{runBRT}}), return a list of matrices for, and optionally plot (\code{\link{plot}}) the mean effect curve for each covariate in the model with confidence regions bounded by \code{quantiles}. The \dots argument is passed to \code{plot} and allows some customisation of the plotting outputs.  
+Given \code{models}, a list of BRT model bootstraps (each element an output from \code{\link{runBRT}}), return a list of matrices for, and optionally plot (\code{\link{plot}}), the mean effect curve for each covariate in the model with confidence regions bounded by \code{quantiles}. The \dots argument is passed to \code{plot} and allows some customisation of the plotting outputs.  
 }
 
 \usage{
@@ -29,7 +29,7 @@ Additional arguments to be passe to \code{\link{plot}}.
 }
 
 \value{
-A list of matrices, one for each covariate, giving the mean and quantiles of the effect curve. Optionally a plot as a side-effect.
+A list of matrices, one for each covariate, giving the mean and quantiles of the effect curve as well as the effect curves for each submodel. Optionally a plot as a side-effect.
 }
 
 \seealso{

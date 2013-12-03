@@ -126,8 +126,6 @@ calcStats <- function(df) {
 getStats <- 
   function (object, cv = TRUE) 
   {
-    models <- object$model$fold.models
-    n.folds <- length(models)
     
     # get observed data
     y.data <- object$model$data$y
@@ -143,47 +141,56 @@ getStats <-
     
     # if the overall training validation stats are required
     if (!cv) {
+      
+      model <- object$models
+      
       # predicted probabilities 
-      pred <- predict(object,
+      pred <- predict(model,
                       x.data,
-                      n.trees = object$n.trees,
+                      n.trees = model$n.trees,
                       type = 'response')
       
       stats <- calcStats(data.frame(y.data,
                                     pred))
       
       return (stats)
+      
+      # otherwise, for cv stats
+    } else {
+      
+      models <- object$model$fold.models
+      n.folds <- length(models)
+      
+      # get fold vector
+      fold_vec <- object$model$fold.vector
+      
+      # blank list to populate
+      preds <- list()
+      
+      # loop through the folds
+      for (i in 1:n.folds) {
+        
+        # fold-specific mask
+        mask <- fold_vec == i
+        
+        # predicted probabilities for that model 
+        pred <- predict.gbm(models[[i]],
+                            x.data[mask, ],
+                            n.trees = models[[i]]$n.trees,
+                            type = 'response')
+        
+        # add an evaluation dataframe to list
+        preds[[i]] <- data.frame(y.data[mask],
+                                 pred)
+        
+      }
+      
+      # calculate cv statistics for all folds
+      stats <- t(sapply(preds, calcStats))
+      
+      # return the mean of these
+      return(colMeans(stats))
     }
-    
-    # get fold vector
-    fold_vec <- object$model$fold.vector
-    
-    # blank list to populate
-    preds <- list()
-    
-    # loop through the folds
-    for (i in 1:n.folds) {
-      
-      # fold-specific mask
-      mask <- fold_vec == i
-      
-      # predicted probabilities for that model 
-      pred <- predict.gbm(models[[i]],
-                          x.data[mask, ],
-                          n.trees = models[[i]]$n.trees,
-                          type = 'response')
-      
-      # add an evaluation dataframe to list
-      preds[[i]] <- data.frame(y.data[mask],
-                               pred)
-      
-    }
-    
-    # calculate cv statistics for all folds
-    stats <- t(sapply(preds, calcStats))
-    
-    # return the mean of these
-    return(colMeans(stats))
   }
 
 # checking inputs
@@ -700,7 +707,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
       
       # extract values for each zone, aggregating by 'fun'
       zones <- zonal(covariates, ad, fun = fun)
-
+      
       cat('zonal done\n')
       
       # match them to polygons
@@ -824,10 +831,10 @@ getEffectPlots <- function (models,
                             ...) {
   
   # given a list of BRT model bootstraps (each an output from runBRT)
-  # get the mean and quantiles (95% by default) lines for effect plots
-  # returns a list of matrices for each covariate and optionally plots
-  # the results. dots argument allows some customisation of the plotting
-  # outputs
+  # get the mean and quantiles (95% by default) effect curves and the
+  # effect curves for each submodel and return a list giving a matrix
+  # for each covariate and optionally plot the results. The dots argument
+  # allows some customisation of the plotting outputs
   
   getLevels <- function (cov, models) {
     # get all the possible levels of covariate 'cov'
@@ -854,7 +861,7 @@ getEffectPlots <- function (models,
     return (y)
   }
   
-  getEffect <- function (cov, models) {
+  getEffect <- function (cov, models, summarise) {
     # get levels
     levels <- getLevels(cov, models)
     if (is.null(levels)) {
@@ -869,13 +876,19 @@ getEffectPlots <- function (models,
       y <- sapply(models, matchLevels, cov, levels)
     }
     
-    # get means and quantiles
+    # give y names
+    colnames(y) <- paste0('model', 1:ncol(y))
+    
+    # calculate the mean
     mn <- rowMeans(y, na.rm = TRUE)
+    # and quantiles
     qs <- t(apply(y, 1, quantile, quantiles, na.rm = TRUE))
-    # and return these
+
+    # and return these alond with the raw data
     return (cbind(covariate = x,
                   mean = mn,
-                  qs))
+                  qs,
+                  y))
   }
   
   ncovs <- length(models[[1]]$effects)
@@ -929,7 +942,7 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975))
   # ensemble predictions given a rasterBrick or rasterStack where each
   # layer is a single ensemble prediction.
 {
-
+  
   # function to get mean, median and quantiles
   combine <- function (x) {
     ans <- c(mean = mean(x),
@@ -943,9 +956,9 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975))
   ans <- calc(preds, fun = combine)
   
   names(ans)[3:nlayers(ans)] <- paste0('quantile_', quantiles)
-
+  
   return(ans)
-
+  
 }
 
 rmse <- function(truth, prediction)
@@ -995,7 +1008,7 @@ subsample <- function (data,
   }
   
   return (sub)
-}
+  }
 
 bgSample <- function(raster,
                      n = 1000,
@@ -1109,24 +1122,24 @@ extractBhatt <- function (pars,
   # pseudo-presences
   if (np > 0) {
     
-#     if (!exists('abs_consensus')) {
-#       
-#       # if a pseudo-absence consensus layer already exists
-#       # then save some computation
-#       pres_consensus <- 1 - abs_consensus
-#       
-#     } else {
-#       
-#       # otherwise create it from consensus
-#       pres_consensus <- (consensus + 100) / 200
-#       
-#     }
+    #     if (!exists('abs_consensus')) {
+    #       
+    #       # if a pseudo-absence consensus layer already exists
+    #       # then save some computation
+    #       pres_consensus <- 1 - abs_consensus
+    #       
+    #     } else {
+    #       
+    #       # otherwise create it from consensus
+    #       pres_consensus <- (consensus + 100) / 200
+    #       
+    #     }
     
-#     # threshold it (set anything below threshold to 0)
-#     threshold <- (threshold + 100) / 200
-#     
-#     under_threshold_idx <- which(getValues(pres_consensus) <= threshold)
-#     pres_consensus <- setValuesIdx(pres_consensus, 0, index = under_threshold_idx)
+    #     # threshold it (set anything below threshold to 0)
+    #     threshold <- (threshold + 100) / 200
+    #     
+    #     under_threshold_idx <- which(getValues(pres_consensus) <= threshold)
+    #     pres_consensus <- setValuesIdx(pres_consensus, 0, index = under_threshold_idx)
     
     # convert presence consensus to the 0, 1 scale and threshold at 'threshold'
     pres_consensus <- calc(consensus,
@@ -1134,8 +1147,8 @@ extractBhatt <- function (pars,
                              ifelse(x <= threshold,
                                     0,
                                     (x + 100) / 200)
-                             })
-#     pres_consensus[pres_consensus <= threshold] <- 0
+                           })
+    #     pres_consensus[pres_consensus <= threshold] <- 0
     
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
@@ -1244,10 +1257,10 @@ biasGrid <- function(polygons, raster, sigma = 30)
   
   
   # replace mask
-#   ras <- setValuesIdx(ras, 0, missingIdx(ras))
+  #   ras <- setValuesIdx(ras, 0, missingIdx(ras))
   ras <- calc(ras, fun = function(x) ifelse(is.na(x), 0, x))
-
-#   ras[missingIdx(ras)] <- 0
+  
+  #   ras[missingIdx(ras)] <- 0
   mask(ras, raster)
 }
 

@@ -11,7 +11,8 @@ To run a BRT model \emph{without} optimising the number of trees you can set \co
 }
 
 \usage{
-runBRT(data, gbm.x, gbm.y, pred.raster,
+runBRT(data, gbm.x, gbm.y,
+      pred.raster, gbm.coords = NULL,
       wt.fun = function(PA) rep(1, length(PA)),
       max_tries = 5, verbose = FALSE, tree.complexity = 4, learning.rate = 0.005,
       bag.fraction = 0.75, n.trees = 10, n.folds = 10,
@@ -20,17 +21,20 @@ runBRT(data, gbm.x, gbm.y, pred.raster,
 
 \arguments{
   \item{data}{
-Input dataframe.
-}
+    Input dataframe.
+  }
   \item{gbm.x}{
-Column numbers containing covariate values.
-}
+    Index for columns containing covariate values.
+  }
   \item{gbm.y}{
-Column number containing presence/absence code (1s or 0s).
-}
+    Index for column containing presence/absence code (1s or 0s).
+  }
   \item{pred.raster}{
-A \code{RasterBrick} or \code{RasterStack} object to predict the model to.
-}
+    A \code{RasterBrick} or \code{RasterStack} object to predict the model to.
+  }
+  \item{gbm.coords}{
+    Optional index for two columns containing coordinates of records. This is required if you later want to calculate validation statistics using pair-wise distance sampling (setting \code{pwd = TRUE} in \code{\link{getStats}}). Set to \code{NULL} (the default) if not required.
+  }
   \item{wt.fun}{
 A function to specify the weighting applied to resence or background points. The function must take a vector of 1s and 0s as input and return a vector of the same length giving regression weights. The default function implies no weighting of points. To apply a 50:50 weighting of presence and absence records (mimicking a  prevalence of 0.5) use: \code{wt.fun = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))}.
 }
@@ -75,6 +79,7 @@ A list containing four elements
   \item{effects }{a list of effect curves with one element ofr each covariate}
   \item{relinf }{a vector of relative influence estimates for each covariate}
   \item{pred }{a \code{RasterLayer} giving predictions on the probability scale.}
+  \item{coords }{a dataframe giving the coordinates of the training points (or \code{NULL} if \code{gbm.coords = NULL})}
 }
 
 \seealso{

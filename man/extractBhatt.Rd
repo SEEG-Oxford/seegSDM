@@ -52,7 +52,7 @@ extractBhatt(pars, occurrence, covariates, consensus, admin, threshold = -25,
 
 \value{
   If \code{return_points = TRUE}, a list with three elements:
-    \item{data }{A dataframe with the first column containing 1s for occurrence and pseudo-presence records and 0s for pseudo-absence records and following columns containing the extracted covariates.}
+    \item{data }{A dataframe with: column 1 giving 1s for occurrence and pseudo-presence records and 0s for pseudo-absence records; columns 2 and 3 giving the coordinates of these records; and the following columns containing the extracted covariates.}
     \item{pseudo_absence }{A \code{SpatialPoints} object of the pseudo-absence points selected. If \code{pars[1]} was 0 or lower this will be \code{NULL}}
     \item{pseudo_presence }{A \code{SpatialPoints} object of the pseudo-presence points selected. If \code{pars[2]} was 0 or lower this will be \code{NULL}}
     
@@ -87,6 +87,7 @@ lis <- extractBhatt(c(2, 1, 5),
                     covariates,
                     consensus,
                     admin,
+                    return_points = TRUE,
                     factor = c(FALSE, FALSE, TRUE))
 
 # look at what's produced

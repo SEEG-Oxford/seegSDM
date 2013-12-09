@@ -163,7 +163,7 @@ points(occ, pch = 16)
 We're now ready to run a BRT model. The ```gbm.step``` function in the ```dismo``` package (which ```seegSDM``` loads) runs a cross-validation procedure to pick the best number of trees (an important parameter in BRT) and runs the final model. ```seegSDM``` provides a wrapper function ```runBRT``` for ```gbm.step``` with a set of SEEG-preferred default settings. Only four arguments need to be provided: the dataframe, the indicies for the presence/pseudo-absence and covariate columns and a ```RasterBrick``` object to predict to.
 
 ```{r message = FALSE}
-brt <- runBRT(lis$data, 2:4, 1, covariates)
+brt <- runBRT(lis$data, 4:6, 1, covariates, gbm.coords = 2:3)
 ```
 
 ```runBRT``` returns a list giving the model, a raster of the predicted probability of presence and data to plot the relative influence and covariate effects. The last two are used in the BRT ensemble modelling, but we can visualise the single model using functions from the ```gbm``` package.
@@ -185,6 +185,11 @@ plot(brt$model, 1:2)
 ...the relative influence of each covariate...
 ```{r fig.width=6, fig.height=6}
 summary(brt$model)
+```
+
+... (internal) cross-validation statistics...
+```{r}
+getStats(brt)
 ```
 
 ...and the map of predicted habitat suitability produced by ```runBRT```.
@@ -262,12 +267,31 @@ data_list <- sfLapply(par_list,
 # takes around 45s on my 4-core machine
 model_list <- sfLapply(data_list,
                        runBRT,
-                       2:4,
+                       4:6,
                        1,
-                       covariates)
+                       covariates,
+                       gbm.coords = 2:3)
+
+```
+
+```model_lis``` now contains a list the objects returned by each ```runBRT``` run. We can get cross-validation statistics for each of these using ```getStats```. We do that now, also in parallel, then combine them into a single matrix.
+
+```{r fig.width= 7, fig.height = 7}
+
+# get cv statistics in parallel
+stat_lis <- sfLapply(model_list, getStats)
 
 # Now we've finished with the parallel cluster, we should shut it down
 sfStop()
+
+# convert the list into a matrix using apply with the do.call function
+stats <- do.call('rbind', stat_lis)
+
+# look at it
+head(stats)
+
+# and produce a boxplot of a few imnportant statistics
+boxplot(stats[, 3:7], col = 'grey', ylim = c(0, 1))
 ```
 
 We now have a list of model outputs, each of which contains the fitted model, predictions and information for plotting. We can pull out individual model runs and plot the predictions.

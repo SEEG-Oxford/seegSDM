@@ -151,11 +151,15 @@ calcStats <- function(df) {
 
 # get the mean stats for one model run either for the training data
 # (if 'cv = FALSE') or as the mean of the statistics for the k-fold
-# cross-validation statistics
+# cross-validation statistics. if pwd  = TRUE use dismo::pwdSmaple
+# to select evaluation points. dots is passed to pwdSample
 getStats <- 
-  function (object, cv = TRUE) 
-  {
-    
+  function (object,
+            cv = TRUE,
+            pwd = TRUE,
+            threshold = 1,
+            ...) {
+
     # get observed data
     y.data <- object$model$data$y
     
@@ -165,28 +169,30 @@ getStats <-
     
     # then coerce to a dataframe
     x.data <- data.frame(x.data)
+    
     # and give them back their names
     names(x.data) <- colnames(object$model$data$x.order)
     
-    # if the overall training validation stats are required
-    if (!cv) {
-      
-      model <- object$model
 
-      # predicted probabilities 
-      pred <- predict(model,
-                      x.data,
-                      n.trees = model$n.trees,
-                      type = 'response')
+    # if pair-wise distance sampling is required
+    if (pwd) {
       
-      stats <- calcStats(data.frame(y.data,
-                                    pred))
+      # error handling
       
-      return (stats)
+      # the user wants to do non-cross-validated pwd
+      if (!cv) {
+        # throw an error since this is undefined
+        stop ('Can only run the pwd procedure id cv = TRUE. See ?getStats for details.')
+      }
       
-      # otherwise, for cv stats
-    } else {
-      
+      # if coordinates weren't returned by runBRT
+      if (is.null(object$coords)) {
+        # throw an error asking for them nicely
+        stop ('Coordinates were not available to run the pwd procedure.
+              To include coordinates provide them to runBRT via the gbm.coords argument, otherwise rerun getStats setting pwd = FALSE')
+      }
+            
+      # get fold models
       models <- object$model$fold.models
       n.folds <- length(models)
       
@@ -202,15 +208,35 @@ getStats <-
         # fold-specific mask
         mask <- fold_vec == i
         
-        # predicted probabilities for that model 
+        # predicted probabilities to test set
         pred <- predict.gbm(models[[i]],
-                            x.data[mask, ],
+                            x.data,
                             n.trees = models[[i]]$n.trees,
                             type = 'response')
         
+        # training presence point index
+        train_p <- which(!mask & y.data == 1)
+        
+        # test presence point index
+        test_p <- which(mask & y.data == 1)
+        
+        # test absence point index
+        test_a <- which(mask & y.data == 0)
+        
+        x <- pwdSample(object$coords[test_p, ],
+                       object$coords[test_a, ],
+                       object$coords[train_p, ],
+                       n = 1, tr = threshold, ...)
+
+        
+        keep_p <- which(!is.na(x[, 1]))
+        keep_a <- na.omit(x[, 1])
+        
+        keep <- c(test_p[keep_p], test_a[keep_a])
+        
         # add an evaluation dataframe to list
-        preds[[i]] <- data.frame(y.data[mask],
-                                 pred)
+        preds[[i]] <- data.frame(PA = y.data[keep],
+                                 pred = pred[keep])
         
       }
       
@@ -218,8 +244,68 @@ getStats <-
       stats <- t(sapply(preds, calcStats))
       
       # return the mean of these
-      return(colMeans(stats))
-    }
+      return (colMeans(stats))
+
+      # with return statement
+      
+    } else {  # close pwd if
+      
+      # if pair-wise sampling isn't required
+      
+      # if the overall training validation stats are required
+      if (!cv) {
+        
+        model <- object$model
+  
+        # predicted probabilities 
+        pred <- predict(model,
+                        x.data,
+                        n.trees = model$n.trees,
+                        type = 'response')
+        
+        stats <- calcStats(data.frame(y.data,
+                                      pred))
+        
+        return (stats)
+        
+      } else {  # close cv if
+        # otherwise, for cv stats
+        
+        models <- object$model$fold.models
+        
+        n.folds <- length(models)
+        
+        # get fold vector
+        fold_vec <- object$model$fold.vector
+        
+        # blank list to populate
+        preds <- list()
+        
+        # loop through the folds
+        for (i in 1:n.folds) {
+          
+          # fold-specific mask
+          mask <- fold_vec == i
+          
+          # predicted probabilities for that model 
+          pred <- predict.gbm(models[[i]],
+                              x.data[mask, ],
+                              n.trees = models[[i]]$n.trees,
+                              type = 'response')
+          
+          # add an evaluation dataframe to list
+          preds[[i]] <- data.frame(y.data[mask],
+                                   pred)
+          
+        }
+        
+        # calculate cv statistics for all folds
+        stats <- t(sapply(preds, calcStats))
+        
+        # return the mean of these
+        return (colMeans(stats))
+      } # close pwd = FALSE, cv else
+    }# close pwd else
   }
 
 # checking inputs
@@ -417,9 +503,12 @@ checkOccurrence <- function(occurrence,
   # ~~~~~~~~~~~~~~
   # if spatial = TRUE, return an SPDF, otherwise the dataframe
   if (spatial) {
-    occurrence <- SpatialPointsDataFrame(cbind(occurrence$Longitude,
-                                               occurrence$Latitude),
+    # get column numbers for long and lat
+    coord_cols <- match(c("Longitude", "Latitude"), names(occurrence))
+    # build SPDF, retaining coordinate column numbers
+    occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],
                                          occurrence,
+                                         coords.nrs = coord_cols,
                                          proj4string = wgs84(TRUE))
   }
   
@@ -732,12 +821,8 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
                        cbind(level_all_codes,
                              rep(NA, length(level_all_codes))))
       
-      cat('about to do zonal\n')
-      
       # extract values for each zone, aggregating by 'fun'
       zones <- zonal(covariates, ad, fun = fun)
-      
-      cat('zonal done\n')
       
       # match them to polygons
       # (accounts for change in order and for duplicates)
@@ -756,6 +841,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 
 
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,
+                    gbm.coords = NULL,
                     wt.fun = function(PA) rep(1, length(PA)),
                     max_tries = 5, verbose = FALSE,
                     tree.complexity = 4, learning.rate = 0.005,
@@ -825,17 +911,40 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
              ...)
   }
   
+  # get effect plots
+  effects <- lapply(1:length(gbm.x),
+                   function(i) {
+                     plot(m,
+                          i,
+                          return.grid = TRUE)
+                   })
+  
+  # get relative influence
+  relinf <- summary(m,
+                   plotit = FALSE)
+  
+  # get prediction raster
+  pred = predict(pred.raster,
+                 m,
+                 type = 'response',
+                 n.trees = m$n.trees)
+  
+  # get coordinates
+  if (is.null(gbm.coords)) {
+    coords <- NULL
+  } else {
+    coords <- data[, gbm.coords]
+  }
   
   # otherwise return the list of model objects
   # (predict grids, relative influence stats and prediction map)
-  list(model = m,
-       effects = lapply(1:length(gbm.x), function(i) plot(m,
-                                                          i,
-                                                          return.grid = TRUE)),
-       
-       relinf = summary(m, plotit = FALSE),
-       
-       pred = predict(pred.raster, m, type = 'response', n.trees = m$n.trees))
+  ans <- list(model = m,
+              effects = effects,
+              relinf = relinf,
+              pred = pred,
+              coords = coords)
+  
+  return (ans)
 }
 
 getRelInf <- function (models, plot = FALSE, quantiles = c(0.025, 0.975), ...)
@@ -1140,7 +1249,9 @@ extractBhatt <- function (pars,
     # (more likely in -100, impossible in +100)
     p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, ...)
     p_abs_covs <- extract(covariates, p_abs)
-    p_abs_data <- cbind(PA = rep(0, nrow(p_abs_covs)), p_abs_covs)
+    p_abs_data <- cbind(PA = rep(0, nrow(p_abs_covs)),
+                        p_abs@coords,
+                        p_abs_covs)
     
   } else {
     
@@ -1177,13 +1288,14 @@ extractBhatt <- function (pars,
                                     0,
                                     (x + 100) / 200)
                            })
-    #     pres_consensus[pres_consensus <= threshold] <- 0
     
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
     p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, ...)
     p_pres_covs <- extract(covariates, p_pres)
-    p_pres_data <- cbind(PA = rep(1, nrow(p_pres_covs)), p_pres_covs)
+    p_pres_data <- cbind(PA = rep(1, nrow(p_pres_covs)),
+                         p_pres@coords,
+                         p_pres_covs)
     
   } else {
     
@@ -1231,8 +1343,10 @@ extractBhatt <- function (pars,
     }
   }
   
-  # add a vector of ones
-  occ_data <- cbind(PA = rep(1, nrow(occ_covs)), occ_covs)
+  # add a vector of ones and the coordinates
+  occ_data <- cbind(PA = rep(1, nrow(occ_covs)),
+                    occurrence@coords,
+                    occ_covs)
   
   # combine the different datasets and convert to a dataframe
   all_data <- rbind(occ_data, p_abs_data, p_pres_data)
@@ -1243,8 +1357,17 @@ extractBhatt <- function (pars,
     facts <- which(factor)
     for (i in facts) {
       # plus one to avoid the PA column
-      all_data[, i + 1] <- factor(all_data[, i + 1])
+      all_data[, i + 3] <- factor(all_data[, i + 3])
     }
+  }
+  
+  # if occurrence gave the names of the xy coordinate columns... use them,
+  if (length(occurrence@coords.nrs) == 2) {
+    # use them in all data
+    colnames(all_data)[2:3] <- colnames(occurrence@data)[occurrence@coords.nrs]
+  } else {
+    # otherwise call them coord_x and coord_y
+    colnames(all_data)[2:3] <- c('coord_x', 'coord_y')
   }
   
   # return list with the dataframe and possibly the SpatialPoints objects

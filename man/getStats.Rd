@@ -11,7 +11,7 @@ If \code{cv = TRUE} the estimates returned are the means of the validation stati
 
 If \code{cv = FALSE} the statistics are calculated once on the full training set using the final full model.
 
-This function does not yet calculate these statistics using the pairwise distance sampling procedure (\code{\link{pwdSample}}) of Hijmans, though future versions will.
+This function does not yet calculate these statistics using the pairwise distance sampling procedure (\code{\link{pwdSample}}) of Hijmans (2012), though future versions will.
 
 }
 \usage{
@@ -29,6 +29,10 @@ Whether to calculate cross-validation statistics using folds (\code{cv = TRUE}) 
 
 \value{
 A vector giving the mean cross-validation statistics and mean standard deviations for these across the folds (see decription for details).
+}
+
+\references{
+  Hijmans, R.J., 2012. Cross-validation of species distribution models: removing spatial sorting bias and calibration with a null-model. Ecology 93: 679-688
 }
 
 \seealso{

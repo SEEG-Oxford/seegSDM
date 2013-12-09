@@ -284,7 +284,7 @@ stat_lis <- sfLapply(model_list, getStats)
 # Now we've finished with the parallel cluster, we should shut it down
 sfStop()
 
-# convert the list into a matrix using apply with the do.call function
+# convert the list into a matrix using the do.call function
 stats <- do.call('rbind', stat_lis)
 
 # look at it

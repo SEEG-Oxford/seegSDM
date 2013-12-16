@@ -726,7 +726,7 @@ nearestLand <- function (points, raster, max_distance) {
   neighbour_list <- lapply(1:nrow(points),
                            function(i) {
                              list(neighbours = neighbour_list[[i]],
-                                  point = points[i, ])
+                                  point = as.numeric(points[i, ]))
                            })
   
   return (t(sapply(neighbour_list, nearest, raster)))

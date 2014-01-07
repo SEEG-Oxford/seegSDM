@@ -32,7 +32,7 @@ library(devtools)
 # use install_github to install seegSDM, giving the name of repo & owner
 # and installing all the packages it depends on
 
-# install_github('seegSDM', 'SEEG-Oxford', dependencies = 'Depends')
+# install_github('seegSDM', 'SEEG-Oxford')
 
 # seegSDM should now be installed, so we just need to load it
 library(seegSDM)

@@ -30,21 +30,13 @@ To install seegSDM straight from github we use the ```install_github``` function
 # and load it
 library(devtools)
 
-# use install_github to install seegSDM, giving the name of repo & owner
-# and installing all the packages it depends on
+# use install_github to install seegSDM, giving the name of repo & owner and
+# installing all the packages it depends on
 
-# install_github('seegSDM', 'SEEG-Oxford', dependencies = 'Depends')
+# install_github('seegSDM', 'SEEG-Oxford')
 
 # seegSDM should now be installed, so we just need to load it
 library(seegSDM)
-```
-
-```
-## Warning: package 'dismo' was built under R version 3.0.2
-```
-
-```
-## Warning: package 'raster' was built under R version 3.0.2
 ```
 
 
@@ -192,8 +184,8 @@ Other pseduo-data generation methods can be carried out using the more general f
 
 
 ```r
-# to make sure this tutorial is reproducible, we set the seed for the
-# random number generator
+# to make sure this tutorial is reproducible, we set the seed for the random
+# number generator
 set.seed(1)
 
 # run extractBhatt, defining the last covariate as a factor
@@ -407,18 +399,17 @@ Loading seegSDM has already loaded snowfall, so the first thing we need to do is
 
 
 ```r
-# set up a cluster of four cpus in with parallel execution.  You may want
-# to run a different number depending on your computer!
+# set up a cluster of four cpus in with parallel execution.  You may want to
+# run a different number depending on your computer!
 sfInit(cpus = 4, parallel = TRUE)
 ```
 
 ```
-## R Version:  R version 3.0.1 (2013-05-16)
+## R Version:  R version 3.0.2 (2013-09-25)
 ```
 
 ```
-## snowfall 1.84-4 initialized (using snow 0.3-12): parallel execution on 4
-## CPUs.
+## snowfall 1.84-6 initialized (using snow 0.3-13): parallel execution on 4 CPUs.
 ```
 
 
@@ -442,8 +433,8 @@ Now we're ready to run some code in parallel. We use the function ```sfLapply```
 
 
 ```r
-# carry out data extraction for the ensemble in parallel takes around 9s
-# on my 4-core machine
+# carry out data extraction for the ensemble in parallel takes around 9s on
+# my 4-core machine
 data_list <- sfLapply(par_list, extractBhatt, occ, covariates, consensus, admin, 
     factor = c(FALSE, FALSE, TRUE))
 ```
@@ -472,12 +463,13 @@ sfStop()
 ```
 
 ```
+## 
 ## Stopping cluster
 ```
 
 ```r
 
-# convert the list into a matrix using apply with the do.call function
+# convert the list into a matrix using the do.call function
 stats <- do.call("rbind", stat_lis)
 
 # look at it
@@ -486,19 +478,19 @@ head(stats)
 
 ```
 ##      deviance   rmse  kappa    auc   sens   spec    pcc kappa_sd auc_sd
-## [1,]    18.52 0.4707 0.4964 0.6978 0.5946 0.9018 0.7482   0.1905 0.1490
-## [2,]    29.03 0.5540 0.3778 0.6933 0.6486 0.7292 0.6889   0.1902 0.1277
-## [3,]    34.27 0.5722 0.4708 0.7268 0.6014 0.8694 0.7354   0.1703 0.1286
-## [4,]    19.86 0.4884 0.3625 0.6303 0.6857 0.6768 0.6813   0.2101 0.1547
-## [5,]    27.58 0.5448 0.4071 0.6285 0.5821 0.8250 0.7036   0.1861 0.1522
-## [6,]    34.28 0.5955 0.4429 0.7121 0.6589 0.7839 0.7214   0.2122 0.1415
+## [1,]    19.04 0.4765 0.4429 0.6851 0.7089 0.7339 0.7214   0.2213 0.1563
+## [2,]    28.40 0.5416 0.4389 0.6888 0.6986 0.7403 0.7194   0.1970 0.1414
+## [3,]    34.62 0.5763 0.4250 0.7063 0.5764 0.8486 0.7125   0.1937 0.1313
+## [4,]    19.07 0.4830 0.2750 0.6303 0.4786 0.7964 0.6375   0.2112 0.1537
+## [5,]    28.33 0.5601 0.4429 0.6947 0.7125 0.7304 0.7214   0.1945 0.1371
+## [6,]    34.64 0.5941 0.4589 0.7071 0.6589 0.8000 0.7295   0.2007 0.1383
 ##      sens_sd spec_sd pcc_sd  thresh
-## [1,]  0.1528 0.05115 0.1155 0.61955
-## [2,]  0.1379 0.11821 0.1123 0.18061
-## [3,]  0.1352 0.07853 0.1068 0.18054
-## [4,]  0.1513 0.13889 0.1242 0.51516
-## [5,]  0.1581 0.06890 0.1170 0.24322
-## [6,]  0.1701 0.12780 0.1154 0.09449
+## [1,]  0.1607  0.1543 0.1193 0.52746
+## [2,]  0.1416  0.1178 0.1113 0.21722
+## [3,]  0.1580  0.0922 0.1106 0.16736
+## [4,]  0.1647  0.1165 0.1257 0.57857
+## [5,]  0.1229  0.1151 0.1152 0.20139
+## [6,]  0.1571  0.1055 0.1130 0.09423
 ```
 
 ```r
@@ -538,10 +530,10 @@ relinf
 ```
 
 ```
-##         mean   2.5% 97.5%
-## cov_a 67.635 57.999 78.47
-## cov_b 26.460 18.314 35.61
-## cov_c  5.904  1.722 14.69
+##         mean   2.5%  97.5%
+## cov_a 68.893 58.292 77.789
+## cov_b 26.150 15.623 36.785
+## cov_c  4.957  2.076  9.334
 ```
 
 

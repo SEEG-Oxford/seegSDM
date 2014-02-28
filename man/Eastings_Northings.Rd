@@ -49,7 +49,8 @@ Ordnance Survey \url{http://en.wikipedia.org/wiki/Ordnance_Survey}
 }
 
 \examples{
-# generate some OS grid references of differing precisions (note the third has a DINTY tetrad reference)
+# generate some OS grid references of differing precisions
+# (note the third has a DINTY tetrad reference)
 os <- c('SP320254', 'SP3209225422', 'SP320254H')
 # convert them to eastings & Northings
 en <- os2en(os)

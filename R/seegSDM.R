@@ -842,7 +842,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 
 runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     gbm.coords = NULL,
-                    wt.fun = function(PA) rep(1, length(PA)),
+                    wt = NULL,
                     max_tries = 5, verbose = FALSE,
                     tree.complexity = 4, learning.rate = 0.005,
                     bag.fraction = 0.75, n.trees = 10,
@@ -857,6 +857,24 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
 {
   # keep running until model isn't null
   # (can happen with wrong leaning rate etc.)
+  
+  # calculate weights
+  if (is.null(wt)) {
+    # if it isn't given, assume full weight for all observations
+    wt <- rep(1, nrow(data))
+  } else if (class(wt) == 'function') {
+    # otherwise, if it's a function of the presene-absence column
+    # calculate the weights
+    wt <- wt(data[, gbm.y])
+  } else if (length(wt) == nrow(data)) {
+    # otherwise use them directly as weights
+    wt <- wt
+  } else if (length(wt) == 1 & is.integer(wt)) {
+    # if it's one integer, use it as a column index
+    wt <- data[, wt]
+  } else {
+    stop('wt must either be NULL, a function, a vector of weights or a column index')
+  }
   
   if (step) {
     # if using gbm.step
@@ -879,7 +897,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     n.trees = n.trees,
                     max.trees = max.trees,
                     plot.main = FALSE,
-                    site.weights = wt.fun(data[, gbm.y]),
+                    site.weights = wt,
                     keep.fold.models = TRUE, 
                     keep.fold.vector = TRUE,
                     keep.fold.fit = TRUE,
@@ -907,7 +925,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
              verbose = verbose,
              shrinkage = learning.rate,
              bag.fraction = bag.fraction,
-             weights = wt.fun(data[, gbm.y]),
+             weights = wt,
              ...)
   }
   

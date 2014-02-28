@@ -13,7 +13,7 @@ To run a BRT model \emph{without} optimising the number of trees you can set \co
 \usage{
 runBRT(data, gbm.x, gbm.y,
       pred.raster, gbm.coords = NULL,
-      wt.fun = function(PA) rep(1, length(PA)),
+      wt = NULL,
       max_tries = 5, verbose = FALSE, tree.complexity = 4, learning.rate = 0.005,
       bag.fraction = 0.75, n.trees = 10, n.folds = 10,
       max.trees = 40000, step.size = 10, step = TRUE, ...)
@@ -35,8 +35,8 @@ runBRT(data, gbm.x, gbm.y,
   \item{gbm.coords}{
     Optional index for two columns containing coordinates of records. This is required if you later want to calculate validation statistics using pair-wise distance sampling (setting \code{pwd = TRUE} in \code{\link{getStats}}). Set to \code{NULL} (the default) if not required.
   }
-  \item{wt.fun}{
-A function to specify the weighting applied to resence or background points. The function must take a vector of 1s and 0s as input and return a vector of the same length giving regression weights. The default function implies no weighting of points. To apply a 50:50 weighting of presence and absence records (mimicking a  prevalence of 0.5) use: \code{wt.fun = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))}.
+  \item{wt}{
+  An optional vector of regression weights, an index for a column giving regression weights or a function to create the weights from the presence/absence column. The default (\code{wt = NULL}) applies full weight to each record. If a function is specified, it must take a vector of 1s and 0s as input and return a vector of the same length giving regression weights. To apply a 50:50 weighting of presence and absence records (mimicking a  prevalence of 0.5) use: \code{wt = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))}.
 }
   \item{max_tries}{
 How many time to try and get gbm.step to converge before throwing an error.

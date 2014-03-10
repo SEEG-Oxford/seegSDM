@@ -869,8 +869,8 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
   } else if (length(wt) == nrow(data)) {
     # otherwise use them directly as weights
     wt <- wt
-  } else if (length(wt) == 1 & is.integer(wt)) {
-    # if it's one integer, use it as a column index
+  } else if (length(wt) == 1)) {
+    # if it's one long, use it as a column index
     wt <- data[, wt]
   } else {
     stop('wt must either be NULL, a function, a vector of weights or a column index')

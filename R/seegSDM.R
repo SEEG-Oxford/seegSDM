@@ -869,7 +869,7 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
   } else if (length(wt) == nrow(data)) {
     # otherwise use them directly as weights
     wt <- wt
-  } else if (length(wt) == 1)) {
+  } else if (length(wt) == 1) {
     # if it's one long, use it as a column index
     wt <- data[, wt]
   } else {

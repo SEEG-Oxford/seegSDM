@@ -1415,7 +1415,7 @@ biasGrid <- function(polygons, raster, sigma = 30)
     x@Polygons[[1]]@area
   }) / prod(res(raster))
   ras <- rasterize(polygons, ras, field = 1/areas,
-                   fun = sum, update = TRUE)
+                   fun = 'sum', update = TRUE)
   # get sigma in pixels
   sigma <- ceiling(sigma / mean(res(raster)))
   # use a window of 5 * sigma

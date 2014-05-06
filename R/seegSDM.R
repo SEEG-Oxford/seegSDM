@@ -1744,3 +1744,212 @@ splitIdx <- function (n, maxn = 1000) {
   end <- c(start[-1] - 1, n)
   lapply(1:bins, function(i) c(start[i], end[i]))
 }
+
+runABRAID <- function (occurrence_path,
+                       extent_path,
+                       admin_path,
+                       covariate_path,
+                       discrete = rep(FALSE,
+                                      length(covariate_path)),
+                       verbose = TRUE,
+                       max_cpus = 32) {
+  
+  # Given the locations of: a csv file containing disease occurrence data
+  # (`occurrence_path`, a character), an ASCII raster giving the definitive
+  # extents of the disease (`extent_path`, a character), and ASCII rasters
+  # giving standardised admin units (`admin_path`; these *must* be in
+  # ascending order) and the ASCII rasters giving the covariates to use
+  # (`covariate_path`, a character vector). Run a predictive model to produce
+  # a risk map (and associated outputs) for the disease.
+  # The file given by `occurrence_path` must contain the columns 'Longitude',
+  # 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree
+  # of weighting to assign to each occurrence record), 'Admin' (giving the
+  # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points)
+  # and 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
+  # NA for points).
+  # To treat any covariates as discrete variables, provide a logical vector
+  # `discrete` with `TRUE` if the covariate is a discrete variable and `FALSE`
+  # otherwise. By default, all covariates are assumed to be continuous.
+  # Set the maximum number of CPUs to use with `max_cpus`. At present runABRAID
+  # runs 64 bootstrap submodels, so the number of cpus used in the cluster will
+  # be set at `min(64, max_cpus)`.
+  
+  # ~~~~~~~~
+  # lambda functions  
+  sub <- function(i, pars) {
+    # get the $i^{th}$ row of pars 
+    pars[i, ]
+  }
+  
+  # ~~~~~~~~
+  # check inputs are of the correct type and files exist
+  stopifnot(class(occurrence_path) == 'character' &&
+              file.exists(occurrence_path))
+  
+  stopifnot(class(extent_path) == 'character' &&
+              file.exists(extent_path))
+  
+  stopifnot(class(admin_path) == 'character' &&
+              all(file.exists(admin_path)))
+  
+  stopifnot(class(covariate_path) == 'character' &&
+              all(file.exists(covariate_path)))
+  
+  stopifnot(class(verbose) == 'logical')
+
+  stopifnot(class(discrete) == 'logical' &&
+              length(discrete == length(covariate_path)))
+  
+  # ~~~~~~~~
+  # load data
+  
+  # occurrence data
+  occurrence <- read.csv(occurrence_path,
+                         stringsAsFactors = FALSE)
+  
+  # check column names are as expected
+  stopifnot(colnames(occurrence) == c('Latitude',
+                                      'Longitude',
+                                      'Weight',
+                                      'GAUL'))
+  
+  # convert it to a SpatialPointsDataFrame
+  # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
+  occurrence <- occurrence2SPDF(occurrence)
+  
+  # load the definitve extent raster
+  extent <- raster(extent_path)
+  
+  # load the admin rasters as a stack
+  admin <- stack(admin_path)
+  
+  # load covariate rasters into a stack
+  covariates <- stack(covariate_path)
+  
+  # set the coordinate systems for rasters as unprojected wgs84 (lat/long)
+  projection(covariates) <- wgs84(FALSE)
+  projection(extent) <- wgs84(FALSE)
+  
+  
+  # ~~~~~~~~
+  # Generate pseudo-absence data  
+  
+  # set up range of parameters for use in `extractBhatt`
+  # use a similar, but reduced set to that used in Bhatt et al. (2013)
+  # for dengue.
+  
+  # number of pseudo-absences per occurrence
+  na <- c(1, 4, 8, 12)
+  
+  # number of pseudo-presences per occurrence
+  np <- c(0, 0.025, 0.05, 0.075)
+
+  # maximum distance from occurrence data
+  mu <- c(10, 20, 30, 40)
+
+  # get all combinations of these
+  pars <- expand.grid(na = na,
+                      np = np,
+                      mu = mu)
+  
+  # convert this into a list
+  par_list <- lapply(1:nrow(pars),
+                     sub,
+                     pars)
+  
+  # get the required number of cpus
+  ncpu <- min(length(par_list),
+              max_cpus)
+  
+  # start the cluster
+  sfInit(parallel = TRUE,
+         cpus = ncpu)
+  
+  # load seegSDM and dependencies on every cluster
+  sfLibrary(seegSDM)
+  
+  # generate pseudo-data in parallel
+  data_list <- sfLapply(par_list,
+                        extractBhatt,
+                        occurrence = occurrence,
+                        covariaes = covariates,
+                        consensus = extent,
+                        admin = admin, 
+                        factor = discete)
+  
+  # run BRT submodels in parallel
+  model_list <- sfLapply(data_list,
+                         runBRT,
+                         gbm.x = 4:6,
+                         gbm.y = 1,
+                         pred.raster = covariates,
+                         gbm.coords = 2:3,
+                         verbose = verbose)
+  
+  # get cross-validation statistics in parallel
+  stat_lis <- sfLapply(model_list,
+                       getStats)
+  
+  # stop the cluster
+  sfStop()
+  
+  # combine and output results
+  
+  # cross-validation statistics (with pairwise-weighted distance sampling)
+  stats <- do.call("rbind", stat_lis)
+  
+  write.csv(stats,
+            'statistics.csv',
+            row.names = FALSE)
+  
+  # relative influence statistics
+  relinf <- getRelInf(model_list,
+                      plot = FALSE)
+  
+  write.csv(relinf,
+            'relative_influence.csv',
+            row.names = TRUE)
+  
+  # effect plots
+  
+  # set up plotting layout
+  rowcol <- n2mfrow(nlayers(covariates))
+  
+  # open plotting device
+  png('effect_plots.png',
+      height = rowcol[1] * 300,
+      width = rowcol[2] * 300)
+  
+  # plot marginal effect curves
+  getEffectPlots(model_list,
+                 plot = TRUE)
+  
+  # turn off the plotting device
+  dev.off()
+  
+  # get summarized prediction raster layers
+
+  # lapply to extract the predictions into a list
+  preds <- lapply(model_list,
+                  function(x) {x$pred})
+
+  # coerce the list into a RasterStack
+  preds <- stack(preds)
+  
+  # summarize predictions
+  preds <- combinePreds(preds)
+  
+  # get the width of the 95% confidence envelope as a metric of uncertainty
+  uncertainty <- preds[[4]] - preds[[3]]
+  
+  # save the mean predicitons and uncerrtainty as rasters
+  writeRaster(preds$mean,
+              'mean_prediction',
+              format = 'ascii')
+  
+  writeRaster(uncertainty,
+              'prediction_uncertainty',
+              format = 'ascii')
+
+  return (NULL)
+}

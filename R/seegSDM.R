@@ -1808,10 +1808,11 @@ runABRAID <- function (occurrence_path,
                          stringsAsFactors = FALSE)
   
   # check column names are as expected
-  stopifnot(colnames(occurrence) == c('Latitude',
-                                      'Longitude',
-                                      'Weight',
-                                      'GAUL'))
+  stopifnot(sort(colnames(occurrence)) == c('Admin',
+                                            'GAUL',
+                                            'Latitude',
+                                            'Longitude',
+                                            'Weight'))
   
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'

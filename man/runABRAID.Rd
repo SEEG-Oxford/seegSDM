@@ -17,7 +17,7 @@ runABRAID(occurrence_path, extent_path, admin_path,
 
 \arguments{
   \item{occurrence_path}{
-    A character vector of length one specifying the file path of a csv file containing occurrence data. this file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree of weighting to assign to each occurrence record), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points) and 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points).
+    A character vector of length one specifying the file path of a csv file containing occurrence data. This file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree of weighting to assign to each occurrence record), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points) and 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points).
   }
   \item{extent_path}{
     A character vector of length one specifying the file path of an  ASCII raster file giving the definitive extents of the disease.

@@ -1752,7 +1752,9 @@ runABRAID <- function (occurrence_path,
                        discrete = rep(FALSE,
                                       length(covariate_path)),
                        verbose = TRUE,
-                       max_cpus = 32) {
+                       max_cpus = 32,
+                       load_seegSDM = function(){ library(seegSDM) },
+                       parallel_flag = TRUE) {
   
   # Given the locations of: a csv file containing disease occurrence data
   # (`occurrence_path`, a character), an ASCII raster giving the definitive
@@ -1800,6 +1802,10 @@ runABRAID <- function (occurrence_path,
   stopifnot(class(discrete) == 'logical' &&
               length(discrete == length(covariate_path)))
   
+  stopifnot(is.function(load_seegSDM))
+  
+  stopifnot(is.logical(parallel_flag))
+  
   # ~~~~~~~~
   # load data
   
@@ -1827,9 +1833,10 @@ runABRAID <- function (occurrence_path,
   # load covariate rasters into a stack
   covariates <- stack(covariate_path)
   
-  # set the coordinate systems for rasters as unprojected wgs84 (lat/long)
-  projection(covariates) <- wgs84(FALSE)
-  projection(extent) <- wgs84(FALSE)
+  # set the coordinate systems for rasters as projected wgs84 (lat/long)
+  projection(covariates) <- wgs84(TRUE)
+  projection(extent) <- wgs84(TRUE)
+  projection(admin) <- wgs84(TRUE)
   
   
   # ~~~~~~~~
@@ -1863,20 +1870,20 @@ runABRAID <- function (occurrence_path,
               max_cpus)
   
   # start the cluster
-  sfInit(parallel = TRUE,
+  sfInit(parallel = parallel_flag,
          cpus = ncpu)
   
   # load seegSDM and dependencies on every cluster
-  sfLibrary(seegSDM)
+  sfClusterCall(load_seegSDM)
   
   # generate pseudo-data in parallel
   data_list <- sfLapply(par_list,
                         extractBhatt,
                         occurrence = occurrence,
-                        covariaes = covariates,
+                        covariates = covariates,
                         consensus = extent,
                         admin = admin, 
-                        factor = discete)
+                        factor = discrete)
   
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,

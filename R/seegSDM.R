@@ -1867,7 +1867,7 @@ runABRAID <- function (occurrence_path,
          cpus = ncpu)
   
   # load seegSDM and dependencies on every cluster
-  sfLibrary(seegSDM)
+  sfExportAll()
   
   # generate pseudo-data in parallel
   data_list <- sfLapply(par_list,

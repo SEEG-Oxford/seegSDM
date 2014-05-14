@@ -1830,9 +1830,10 @@ runABRAID <- function (occurrence_path,
   # load covariate rasters into a stack
   covariates <- stack(covariate_path)
   
-  # set the coordinate systems for rasters as unprojected wgs84 (lat/long)
-  projection(covariates) <- wgs84(FALSE)
-  projection(extent) <- wgs84(FALSE)
+  # set the coordinate systems for rasters as projected wgs84 (lat/long)
+  projection(covariates) <- wgs84(TRUE)
+  projection(extent) <- wgs84(TRUE)
+  projection(admin) <- wgs84(TRUE)
   
   
   # ~~~~~~~~

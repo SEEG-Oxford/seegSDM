@@ -1876,7 +1876,7 @@ runABRAID <- function (occurrence_path,
   data_list <- sfLapply(par_list,
                         extractBhatt,
                         occurrence = occurrence,
-                        covariaes = covariates,
+                        covariates = covariates,
                         consensus = extent,
                         admin = admin, 
                         factor = discrete)

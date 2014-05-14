@@ -809,17 +809,16 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
       # clone the admin layer we want
       ad <- admin[[level + 1]]
       
-      # get all (and possibly some excess) unique GAUL codes
-      level_all_codes <- ad@data@min : ad@data@max
+      # build a raster with 1s where the required GAUL codes are present
+      ad_in <- ad %in% level_GAULs
       
-      # remove the ones we *do* want from this list, by index
-      level_all_codes <- level_all_codes[-(level_GAULs - ad@data@min + 1)]
+      # set 0s to NA
+      ad_in <- reclassify(ad_in,
+                          rcl = cbind(c(0, 1),
+                                      c(NA, 1)))
       
-      # then reclassify ad to mask out the ones we don't want
-      # this *should* speed up the zonal operation
-      ad <- reclassify(ad,
-                       cbind(level_all_codes,
-                             rep(NA, length(level_all_codes))))
+      # mask ad by this, to produce a slimmed-down raster to speed up zonal
+      ad <- mask(ad, ad_in)
       
       # extract values for each zone, aggregating by 'fun'
       zones <- zonal(covariates, ad, fun = fun)

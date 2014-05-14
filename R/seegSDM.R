@@ -1876,7 +1876,7 @@ runABRAID <- function (occurrence_path,
                         covariaes = covariates,
                         consensus = extent,
                         admin = admin, 
-                        factor = discete)
+                        factor = discrete)
   
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,

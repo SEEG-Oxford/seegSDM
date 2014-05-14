@@ -37,6 +37,9 @@ runABRAID(occurrence_path, extent_path, admin_path,
   \item{max_cpus}{
   The maximum number of CPUs to use when running the ensemble. At present \code{runABRAID} runs 64 bootstrap submodels per disease, so the number of cpus used in the cluster will be set at \code{min(64, max_cpus)}.
   }
+  \item{load_seegSDM}{
+  A parameterless function which can be used to load seegSDM and it's dependencies on each cluster node.
+  }
 }
 
 \value{

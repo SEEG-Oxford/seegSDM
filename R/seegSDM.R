@@ -1753,7 +1753,8 @@ runABRAID <- function (occurrence_path,
                                       length(covariate_path)),
                        verbose = TRUE,
                        max_cpus = 32,
-                       load_seegSDM = function(){ library(seegSDM) }) {
+                       load_seegSDM = function(){ library(seegSDM) },
+                       parallel_flag = TRUE) {
   
   # Given the locations of: a csv file containing disease occurrence data
   # (`occurrence_path`, a character), an ASCII raster giving the definitive
@@ -1802,6 +1803,8 @@ runABRAID <- function (occurrence_path,
               length(discrete == length(covariate_path)))
   
   stopifnot(is.function(load_seegSDM))
+  
+  stopifnot(is.logical(parallel_flag))
   
   # ~~~~~~~~
   # load data
@@ -1867,7 +1870,7 @@ runABRAID <- function (occurrence_path,
               max_cpus)
   
   # start the cluster
-  sfInit(parallel = TRUE,
+  sfInit(parallel = parallel_flag,
          cpus = ncpu)
   
   # load seegSDM and dependencies on every cluster

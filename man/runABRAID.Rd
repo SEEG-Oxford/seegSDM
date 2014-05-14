@@ -40,6 +40,9 @@ runABRAID(occurrence_path, extent_path, admin_path,
   \item{load_seegSDM}{
   A parameterless function which can be used to load seegSDM and it's dependencies on each cluster node.
   }
+  \item{parallel_flag}{
+  Whether to perform parallelised run.
+  }
 }
 
 \value{

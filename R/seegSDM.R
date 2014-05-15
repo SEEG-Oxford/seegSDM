@@ -1791,8 +1791,8 @@ runABRAID <- function (occurrence_path,
   stopifnot(class(extent_path) == 'character' &&
               file.exists(extent_path))
   
-  stopifnot(class(admin_path) == 'character' &&
-              all(file.exists(admin_path)))
+  stopifnot(file.exists(admin1_path))
+  stopifnot(file.exists(admin2_path))
   
   stopifnot(class(covariate_path) == 'character' &&
               all(file.exists(covariate_path)))

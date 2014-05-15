@@ -1746,7 +1746,8 @@ splitIdx <- function (n, maxn = 1000) {
 
 runABRAID <- function (occurrence_path,
                        extent_path,
-                       admin_path,
+                       admin1_path,
+                       admin2_path,
                        covariate_path,
                        discrete = rep(FALSE,
                                       length(covariate_path)),
@@ -1827,7 +1828,14 @@ runABRAID <- function (occurrence_path,
   extent <- raster(extent_path)
   
   # load the admin rasters as a stack
-  admin <- stack(admin_path)
+  # Note the horrible hack of specifying admin 0
+  # and admin 3 as the provided admin 1.
+  # These should be ignored since ABRAID should never contain anything other
+  # than levels 1 and 2
+  admin <- stack(c(admin1_path,
+                   admin1_path,
+                   admin2_path,
+                   admin1_path)
   
   # load covariate rasters into a stack
   covariates <- stack(covariate_path)
@@ -1875,6 +1883,10 @@ runABRAID <- function (occurrence_path,
   # load seegSDM and dependencies on every cluster
   sfClusterCall(load_seegSDM)
   
+if (verbose) {
+  cat('\nseegSDM loaded on cluster\n\n')
+}
+
   # generate pseudo-data in parallel
   data_list <- sfLapply(par_list,
                         extractBhatt,
@@ -1883,7 +1895,11 @@ runABRAID <- function (occurrence_path,
                         consensus = extent,
                         admin = admin, 
                         factor = discrete)
-  
+
+if (verbose) {
+  cat('extractBhatt done\n\n')
+}
+
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,
@@ -1893,10 +1909,16 @@ runABRAID <- function (occurrence_path,
                          gbm.coords = 2:3,
                          verbose = verbose)
   
+if (verbose) {
+  cat('model fitting done\n\n')
+}
   # get cross-validation statistics in parallel
   stat_lis <- sfLapply(model_list,
                        getStats)
   
+if (verbose) {
+  cat('statistics extracted\n\n')
+}
   # stop the cluster
   sfStop()
   

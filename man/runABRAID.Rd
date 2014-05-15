@@ -10,9 +10,15 @@ This function is intended for use in the ABRAID mapping platform, rather than fo
 }
 
 \usage{
-runABRAID(occurrence_path, extent_path, admin_path,
-          covariate_path, discrete = rep(FALSE, length(covariate_path)),
-          verbose = TRUE, max_cpus = 32)
+runABRAID(occurrence_path,
+          extent_path,
+          admin1_path,
+          admin2_path,
+          covariate_path,
+          discrete = rep(FALSE, length(covariate_path)),
+          verbose = TRUE,
+          max_cpus = 32,
+          parallel_flag = TRUE)
 }
 
 \arguments{
@@ -22,8 +28,11 @@ runABRAID(occurrence_path, extent_path, admin_path,
   \item{extent_path}{
     A character vector of length one specifying the file path of an  ASCII raster file giving the definitive extents of the disease.
   }
-  \item{admin_path}{
-    A character vector specifying the file paths of ASCII raster files giving the GAUL codes for administrative regions at levels one and above. These must be given in ascending order starting at 1.
+  \item{admin1_path}{
+    A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level one.
+  }
+  \item{admin2_path}{
+    A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level two.
   }
   \item{covariate_path}{
     A character vector specifying the file paths of ASCII raster files giving the environmetnal covariates used to predict risk of the disease.

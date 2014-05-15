@@ -1792,6 +1792,7 @@ runABRAID <- function (occurrence_path,
               file.exists(extent_path))
   
   stopifnot(file.exists(admin1_path))
+  
   stopifnot(file.exists(admin2_path))
   
   stopifnot(class(covariate_path) == 'character' &&
@@ -1903,7 +1904,7 @@ if (verbose) {
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,
-                         gbm.x = 4:6,
+                         gbm.x = 4:ncol(data_list[[1]]),
                          gbm.y = 1,
                          pred.raster = covariates,
                          gbm.coords = 2:3,

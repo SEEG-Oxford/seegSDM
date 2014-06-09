@@ -809,18 +809,17 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
       # clone the admin layer we want
       ad <- admin[[level + 1]]
       
-      # build a raster with 1s where the required GAUL codes are present
-      ad_in <- ad %in% level_GAULs
+      # define a function to mask out pixels which aren't to be reclassified
+      keep <- function(cells, ...) {
+        ifelse(cells %in% level_GAULs,
+               cells,
+               NA)
+      }
       
-      # set 0s to NA
-      ad_in <- reclassify(ad_in,
-                          rcl = cbind(c(0, 1),
-                                      c(NA, 1)))
+      # use the function to mask out unwanted regions and speed up `zonal`
+      ad <- calc(ad, keep)
       
-      # mask ad by this, to produce a slimmed-down raster to speed up zonal
-      ad <- mask(ad, ad_in)
-      
-      # extract values for each zone, aggregating by 'fun'
+      # extract values for each zone, aggregating by `fun`
       zones <- zonal(covariates, ad, fun = fun)
       
       # match them to polygons

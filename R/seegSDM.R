@@ -1974,11 +1974,17 @@ if (verbose) {
   # save the mean predicitons and uncerrtainty as rasters
   writeRaster(preds$mean,
               'mean_prediction',
-              format = 'ascii')
+              format = 'GTiff',
+              options = c("COMPRESS=DEFLATE",
+                          "ZLEVEL=9"),
+              overwrite = TRUE)
   
   writeRaster(uncertainty,
               'prediction_uncertainty',
-              format = 'ascii')
+              format = 'GTiff',
+              options = c("COMPRESS=DEFLATE",
+                          "ZLEVEL=9"),
+              overwrite = TRUE)
 
   return (NULL)
 }

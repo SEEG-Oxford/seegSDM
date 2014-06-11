@@ -1923,12 +1923,15 @@ if (verbose) {
   sfStop()
   
   # combine and output results
+
+  # make a results directory
+  dir.create('results')
   
   # cross-validation statistics (with pairwise-weighted distance sampling)
   stats <- do.call("rbind", stat_lis)
   
   write.csv(stats,
-            'statistics.csv',
+            'results/statistics.csv',
             row.names = FALSE)
   
   # relative influence statistics
@@ -1936,7 +1939,7 @@ if (verbose) {
                       plot = FALSE)
   
   write.csv(relinf,
-            'relative_influence.csv',
+            'results/relative_influence.csv',
             row.names = TRUE)
   
   # effect plots
@@ -1945,9 +1948,12 @@ if (verbose) {
   rowcol <- n2mfrow(nlayers(covariates))
   
   # open plotting device
-  png('effect_plots.png',
+  png('results/effect_plots.png',
       height = rowcol[1] * 300,
       width = rowcol[2] * 300)
+
+  # set the plotting layout
+  par(mfrow = rowcol)
   
   # plot marginal effect curves
   getEffectPlots(model_list,
@@ -1973,14 +1979,14 @@ if (verbose) {
   
   # save the mean predicitons and uncerrtainty as rasters
   writeRaster(preds$mean,
-              'mean_prediction',
+              'results/mean_prediction',
               format = 'GTiff',
               options = c("COMPRESS=DEFLATE",
                           "ZLEVEL=9"),
               overwrite = TRUE)
   
   writeRaster(uncertainty,
-              'prediction_uncertainty',
+              'results/prediction_uncertainty',
               format = 'GTiff',
               options = c("COMPRESS=DEFLATE",
                           "ZLEVEL=9"),

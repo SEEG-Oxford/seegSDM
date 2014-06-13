@@ -1992,5 +1992,6 @@ if (verbose) {
                           "ZLEVEL=9"),
               overwrite = TRUE)
 
-  return (NULL)
+  # return an exit code of 0, as in the ABRAID-MP code
+  return (0)
 }

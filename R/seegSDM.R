@@ -1978,7 +1978,7 @@ if (verbose) {
   uncertainty <- preds[[4]] - preds[[3]]
   
   # save the mean predicitons and uncerrtainty as rasters
-  writeRaster(preds$mean,
+  writeRaster(preds[[1]],
               'results/mean_prediction',
               format = 'GTiff',
               options = c("COMPRESS=DEFLATE",

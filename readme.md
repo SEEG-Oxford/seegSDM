@@ -8,15 +8,23 @@ This package contains (or at least will contain) a set of streamlined functions 
 
 To install the package from gihub you first need to install and load Hadley Wickham's [devtools package][3], like this:
 
+
 ```r
 install.packages('devtools')
 library(devtools)
 ```
 
-Then use the `install_github` function, also installing packages that seegSDM depends on
+```seegSDM``` currently depends on version 2.1-0.4 or later of the ```gbm``` R package.
+This version isn't on CRAN yet, so you'll need to install it from github first.
 
 ```r
-install_github('seegSDM', 'SEEG-Oxford')
+install_github('pdmetcalfe/gbm')
+```
+
+Now we can use ```install_github``` to install ```seegSDM```
+
+```r
+install_github('SEEG-Oxford/seegSDM')
 ```
 
 and load the package and you're ready to go

@@ -22,22 +22,27 @@ It will includes importing and checking data, running BRT ensembles in parallel,
 ### <a id="install"></a>Installing the package
 
 To install seegSDM straight from github we use the ```install_github``` function in the ```devtools``` package.
+
+If it isn't already installed, install devtools from CRAN and load it
+
 ```{r message=FALSE}
-# if it isn't already installed, install devtools from CRAN
-# install.packages('devtools')
-
-# and load it
+install.packages('devtools')
 library(devtools)
-
-# use install_github to install seegSDM, giving the name of repo & owner
-# and installing all the packages it depends on
-
-# install_github('seegSDM', 'SEEG-Oxford')
-
-# seegSDM should now be installed, so we just need to load it
-library(seegSDM)
 ```
 
+```seegSDM``` currently depends on version 2.1-0.4 or later of the ```gbm``` R package.
+This version isn't on CRAN yet, so you'll need to install it from github first.
+
+```{r message=FALSE}
+install_github('pdmetcalfe/gbm')
+```
+
+Now we can use ```install_github``` to install ```seegSDM``` and then load the package
+
+```{r message=FALSE}
+install_github('SEEG-Oxford/seegSDM')
+library(seegSDM)
+```
 
 ### <a id="load"></a>Loading data
 

@@ -103,7 +103,7 @@ calcStats <- function(df) {
   
   # root mean squared error
   rmse <- rmse(df[, 2], df[, 3])
-
+  
   # auc (using my safe version - see above)
   auc <- auc2(df, st.dev = TRUE)
   
@@ -116,7 +116,7 @@ calcStats <- function(df) {
   
   # create confusiuon matrix at this threshold
   confusion <- cmx(df, threshold = opt[1, 2])
-
+  
   # kappa (using threshold)
   kappa <- Kappa(confusion, st.dev = TRUE)
   
@@ -159,7 +159,7 @@ getStats <-
             pwd = TRUE,
             threshold = 1,
             ...) {
-
+    
     # get observed data
     y.data <- object$model$data$y
     
@@ -173,7 +173,7 @@ getStats <-
     # and give them back their names
     names(x.data) <- colnames(object$model$data$x.order)
     
-
+    
     # if pair-wise distance sampling is required
     if (pwd) {
       
@@ -191,7 +191,7 @@ getStats <-
         stop ('Coordinates were not available to run the pwd procedure.
               To include coordinates provide them to runBRT via the gbm.coords argument, otherwise rerun getStats setting pwd = FALSE')
       }
-            
+      
       # get fold models
       models <- object$model$fold.models
       n.folds <- length(models)
@@ -227,7 +227,7 @@ getStats <-
                        object$coords[test_a, ],
                        object$coords[train_p, ],
                        n = 1, tr = threshold, ...)
-
+        
         
         keep_p <- which(!is.na(x[, 1]))
         keep_a <- na.omit(x[, 1])
@@ -245,67 +245,67 @@ getStats <-
       
       # return the mean of these
       return (colMeans(stats))
-
+      
       # with return statement
       
-    } else {  # close pwd if
-      
-      # if pair-wise sampling isn't required
-      
-      # if the overall training validation stats are required
-      if (!cv) {
+      } else {  # close pwd if
         
-        model <- object$model
-  
-        # predicted probabilities 
-        pred <- predict(model,
-                        x.data,
-                        n.trees = model$n.trees,
-                        type = 'response')
+        # if pair-wise sampling isn't required
         
-        stats <- calcStats(data.frame(y.data,
-                                      pred))
-        
-        return (stats)
-        
-      } else {  # close cv if
-        # otherwise, for cv stats
-        
-        models <- object$model$fold.models
-        
-        n.folds <- length(models)
-        
-        # get fold vector
-        fold_vec <- object$model$fold.vector
-        
-        # blank list to populate
-        preds <- list()
-        
-        # loop through the folds
-        for (i in 1:n.folds) {
+        # if the overall training validation stats are required
+        if (!cv) {
           
-          # fold-specific mask
-          mask <- fold_vec == i
+          model <- object$model
           
-          # predicted probabilities for that model 
-          pred <- predict.gbm(models[[i]],
-                              x.data[mask, ],
-                              n.trees = models[[i]]$n.trees,
-                              type = 'response')
+          # predicted probabilities 
+          pred <- predict(model,
+                          x.data,
+                          n.trees = model$n.trees,
+                          type = 'response')
           
-          # add an evaluation dataframe to list
-          preds[[i]] <- data.frame(y.data[mask],
-                                   pred)
+          stats <- calcStats(data.frame(y.data,
+                                        pred))
           
-        }
-        
-        # calculate cv statistics for all folds
-        stats <- t(sapply(preds, calcStats))
-        
-        # return the mean of these
-        return (colMeans(stats))
-      } # close pwd = FALSE, cv else
-    }# close pwd else
+          return (stats)
+          
+        } else {  # close cv if
+          # otherwise, for cv stats
+          
+          models <- object$model$fold.models
+          
+          n.folds <- length(models)
+          
+          # get fold vector
+          fold_vec <- object$model$fold.vector
+          
+          # blank list to populate
+          preds <- list()
+          
+          # loop through the folds
+          for (i in 1:n.folds) {
+            
+            # fold-specific mask
+            mask <- fold_vec == i
+            
+            # predicted probabilities for that model 
+            pred <- predict.gbm(models[[i]],
+                                x.data[mask, ],
+                                n.trees = models[[i]]$n.trees,
+                                type = 'response')
+            
+            # add an evaluation dataframe to list
+            preds[[i]] <- data.frame(y.data[mask],
+                                     pred)
+            
+          }
+          
+          # calculate cv statistics for all folds
+          stats <- t(sapply(preds, calcStats))
+          
+          # return the mean of these
+          return (colMeans(stats))
+        } # close pwd = FALSE, cv else
+      }# close pwd else
   }
 
 # checking inputs
@@ -838,23 +838,33 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 }
 
 
-runBRT <- function (data, gbm.x, gbm.y, pred.raster,
+runBRT <- function (data,
+                    gbm.x,
+                    gbm.y,
+                    pred.raster,
                     gbm.coords = NULL,
                     wt = NULL,
-                    max_tries = 5, verbose = FALSE,
-                    tree.complexity = 4, learning.rate = 0.005,
-                    bag.fraction = 0.75, n.trees = 10,
-                    n.folds = 10, max.trees = 40000,
-                    step.size = 10, step = TRUE, ...)
-  
-  # wrapper to run a BRT model with Sam's defaults
-  # and return covariate effects, relative influence,
-  # and a prediction map (on the probability scale).
-  # background points are weighted at 4 * presence points,
-  # mimicking prevalence of 0.2
+                    max_tries = 5,
+                    verbose = FALSE,
+                    tree.complexity = 4,
+                    learning.rate = 0.005,
+                    bag.fraction = 0.75,
+                    n.trees = 10,
+                    n.folds = 10,
+                    max.trees = 10000,
+                    step.size = 10,
+                    method = c('step', 'perf', 'gbm'),
+                    ...)
+
+# wrapper to run a BRT model with Sam's defaults
+# and return covariate effects, relative influence,
+# and a prediction map (on the probability scale).
+# background points are weighted at 4 * presence points,
+# mimicking prevalence of 0.2
 {
-  # keep running until model isn't null
-  # (can happen with wrong leaning rate etc.)
+  
+  # get the required method
+  method <- match.arg(method)
   
   # calculate weights
   if (is.null(wt)) {
@@ -874,8 +884,11 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
     stop('wt must either be NULL, a function, a vector of weights or a column index')
   }
   
-  if (step) {
-    # if using gbm.step
+  # if using gbm.step
+  if (method == 'step') {
+    
+    # we'll need to use a while loop to tweak the parameters ontil the
+    # algorithm converges
     
     # set up for the while loop
     m <- NULL
@@ -912,32 +925,70 @@ runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                   'attempts, try reducing the step.size or learning rate'))
     }
     
-  } else {
-    # if not stepping, run a single BRT with n.trees trees
+  } else if (method == 'perf') {
+    
+    # if using gbm.perf, run a single BRT with max.trees trees
     
     m <- gbm(data[, gbm.y] ~ .,
              distribution = 'bernoulli',
              data = data[, gbm.x],
-             n.trees = n.trees,
+             n.trees = max.trees,
+             cv.folds = n.folds,
              interaction.depth = tree.complexity,
              verbose = verbose,
              shrinkage = learning.rate,
              bag.fraction = bag.fraction,
              weights = wt,
              ...)
-  }
+    
+    # and run the gbm.perf procedure to select the optimal
+    # number of trees
+    ntree <- gbm.perf(m,
+                      plot.it = FALSE,
+                      method = 'cv')
+    
+    # if the best number of trees is also the maximum number of trees,
+    # issue a warning
+    
+    if (ntree == n.trees) {
+      warning(paste0('The optimal number of trees by cross fold validation\
+                     using gbm.perf was ',
+                     ntree,
+                     ', the same as the maximum number of trees.
+                     You may get a better model fit if you increase n.trees.'))
+    }
+    
+    # set the number of trees in the model to the optimal
+    m$n.trees <- ntree
+    
+    } else {
+      
+      # otherwise run a single model with n.trees trees
+      m <- gbm(data[, gbm.y] ~ .,
+               distribution = 'bernoulli',
+               data = data[, gbm.x],
+               n.trees = n.trees,
+               cv.folds = n.folds,
+               interaction.depth = tree.complexity,
+               verbose = verbose,
+               shrinkage = learning.rate,
+               bag.fraction = bag.fraction,
+               weights = wt,
+               ...)
+      
+    }
   
   # get effect plots
   effects <- lapply(1:length(gbm.x),
-                   function(i) {
-                     plot(m,
-                          i,
-                          return.grid = TRUE)
-                   })
+                    function(i) {
+                      plot(m,
+                           i,
+                           return.grid = TRUE)
+                    })
   
   # get relative influence
   relinf <- summary(m,
-                   plotit = FALSE)
+                    plotit = FALSE)
   
   # get prediction raster
   pred = predict(pred.raster,
@@ -1037,7 +1088,7 @@ getEffectPlots <- function (models,
     mn <- rowMeans(y, na.rm = TRUE)
     # and quantiles
     qs <- t(apply(y, 1, quantile, quantiles, na.rm = TRUE))
-
+    
     # and return these alond with the raw data
     return (cbind(covariate = x,
                   mean = mn,
@@ -1798,7 +1849,7 @@ runABRAID <- function (occurrence_path,
               all(file.exists(covariate_path)))
   
   stopifnot(class(verbose) == 'logical')
-
+  
   stopifnot(class(discrete) == 'logical' &&
               length(discrete == length(covariate_path)))
   
@@ -1858,10 +1909,10 @@ runABRAID <- function (occurrence_path,
   
   # number of pseudo-presences per occurrence
   np <- c(0)# , 0.025, 0.05, 0.075)
-
+  
   # maximum distance from occurrence data
   mu <- c(10)# , 20, 30, 40)
-
+  
   # get all combinations of these
   pars <- expand.grid(na = na,
                       np = np,
@@ -1883,10 +1934,10 @@ runABRAID <- function (occurrence_path,
   # load seegSDM and dependencies on every cluster
   sfClusterCall(load_seegSDM)
   
-if (verbose) {
-  cat('\nseegSDM loaded on cluster\n\n')
-}
-
+  if (verbose) {
+    cat('\nseegSDM loaded on cluster\n\n')
+  }
+  
   # generate pseudo-data in parallel
   data_list <- sfLapply(par_list,
                         extractBhatt,
@@ -1895,11 +1946,11 @@ if (verbose) {
                         consensus = extent,
                         admin = admin, 
                         factor = discrete)
-
-if (verbose) {
-  cat('extractBhatt done\n\n')
-}
-
+  
+  if (verbose) {
+    cat('extractBhatt done\n\n')
+  }
+  
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,
@@ -1909,21 +1960,21 @@ if (verbose) {
                          gbm.coords = 2:3,
                          verbose = verbose)
   
-if (verbose) {
-  cat('model fitting done\n\n')
-}
+  if (verbose) {
+    cat('model fitting done\n\n')
+  }
   # get cross-validation statistics in parallel
   stat_lis <- sfLapply(model_list,
                        getStats)
   
-if (verbose) {
-  cat('statistics extracted\n\n')
-}
+  if (verbose) {
+    cat('statistics extracted\n\n')
+  }
   # stop the cluster
   sfStop()
   
   # combine and output results
-
+  
   # make a results directory
   dir.create('results')
   
@@ -1951,7 +2002,7 @@ if (verbose) {
   png('results/effect_plots.png',
       height = rowcol[1] * 300,
       width = rowcol[2] * 300)
-
+  
   # set the plotting layout
   par(mfrow = rowcol)
   
@@ -1963,11 +2014,11 @@ if (verbose) {
   dev.off()
   
   # get summarized prediction raster layers
-
+  
   # lapply to extract the predictions into a list
   preds <- lapply(model_list,
                   function(x) {x$pred})
-
+  
   # coerce the list into a RasterStack
   preds <- stack(preds)
   
@@ -1991,7 +2042,7 @@ if (verbose) {
               options = c("COMPRESS=DEFLATE",
                           "ZLEVEL=9"),
               overwrite = TRUE)
-
+  
   # return an exit code of 0, as in the ABRAID-MP code
   return (0)
 }

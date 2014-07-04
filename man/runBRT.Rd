@@ -5,18 +5,34 @@
 Run a boosted regression tree model using Sam's default settings
 }
 \description{
-A wrapper to run a BRT model using \code{\link{gbm.step}} (or optionally just \code{\link{gbm}}) with Sam's default parameter settings. Covariate effect curves, relative influences and a prediction map on the probability scale are returned. A function to define regression weights can be specified through \code{wt.fun}.
-BRT models sometimes fail to converge and the \code{gbm.step} implementation fails silently, returning \code{NULL}. \code{runBRT} instead attempts to run a model \code{max_tries} times and fails with an error if it still hasn't converged.
-To run a BRT model \emph{without} optimising the number of trees you can set \code{step} to \code{FALSE} - which should be much faster.
+A wrapper to run a BRT model using \code{\link{gbm.step}} or \code{\link{gbm}} with or without selecting the op[timal number of trees using \code{\link{gbm.perf}} with parameter settings used in Bhatt et al. (2013). Covariate effect curves, relative influences and a prediction map on the probability scale are returned. A function to define regression weights can be specified through \code{wt.fun}.
+
+BRT models sometimes fail to converge and the \code{gbm.step} implementation fails silently, returning \code{NULL}. If \code{method = 'step'}, \code{runBRT} instead attempts to run the procedure \code{max_tries} times and fails with an error if it still hasn't converged.
+
+
+To run a BRT model \emph{without} optimising the number of trees you can set \code{method = 'gbm'} witha reasonable number of trees in \code{n.trees}, which should be much faster.
+
+At present, only \code{method = 'step'} returns a model from which full validation statistics can be extracted.
 }
 
 \usage{
-runBRT(data, gbm.x, gbm.y,
-      pred.raster, gbm.coords = NULL,
-      wt = NULL,
-      max_tries = 5, verbose = FALSE, tree.complexity = 4, learning.rate = 0.005,
-      bag.fraction = 0.75, n.trees = 10, n.folds = 10,
-      max.trees = 40000, step.size = 10, step = TRUE, ...)
+runBRT(data,
+       gbm.x,
+       gbm.y,
+       pred.raster,
+       gbm.coords = NULL,
+       wt = NULL,
+       max_tries = 5,
+       verbose = FALSE,
+       tree.complexity = 4,
+       learning.rate = 0.005,
+       bag.fraction = 0.75,
+       n.trees = 10,
+       n.folds = 10,
+       max.trees = 10000,
+       step.size = 10,
+       method = c('step', 'perf', 'gbm'),
+       ...)
 }
 
 \arguments{
@@ -65,9 +81,9 @@ Passed to \code{gbm.step}, maximum number of trees to fit before stopping the st
   \item{step.size}{
 Passed to \code{gbm.step}, number of trees to add at each iteration.
 }
-  \item{step}{
-Whether to run the \code{gbm.step} procedure. If \code{FALSE} a single model is run with {n.trees} trees. Note that using the default value of \code{n.trees = 10} is likely to be a bad move.
-  }
+  \item{method}{
+Whether to run the model using the \code{gbm.step} procedure (\code{method = 'step'}) to automatically detect the number of trees (the default), the \code{\link{gbm.perf}} procedure using cross-validation post-hoc \code{method = 'perf'} (much faster) or a simple \code{gbm} model with a the number of trees fixed at code{n.trees} \code{method = 'gbm'} (even faster, but potentially less accurate). Both \code{'step'} amd \code{'perf'} will fit up to a maximum of\code{max.trees} trees.
+} 
   \item{\dots}{
 Additional functions to pass to \code{gbm.step}.
 }

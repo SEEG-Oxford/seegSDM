@@ -930,7 +930,7 @@ runBRT <- function (data,
     # if using gbm.perf, run a single BRT with max.trees trees
     
     m <- gbm(data[, gbm.y] ~ .,
-             distribution = 'bernoulli',
+#              distribution = 'bernoulli',
              data = data[, gbm.x],
              n.trees = max.trees,
              cv.folds = n.folds,
@@ -965,7 +965,7 @@ runBRT <- function (data,
       
       # otherwise run a single model with n.trees trees
       m <- gbm(data[, gbm.y] ~ .,
-               distribution = 'bernoulli',
+#                distribution = 'bernoulli',
                data = data[, gbm.x],
                n.trees = n.trees,
                cv.folds = n.folds,

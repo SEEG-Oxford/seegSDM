@@ -854,6 +854,8 @@ runBRT <- function (data,
                     max.trees = 10000,
                     step.size = 10,
                     method = c('step', 'perf', 'gbm'),
+                    family = 'bernoulli',
+                    gbm.offset = NULL,
                     ...)
 
 # wrapper to run a BRT model with Sam's defaults
@@ -894,12 +896,22 @@ runBRT <- function (data,
     m <- NULL
     tries <- 0
     
+    # if there's an offset, get it as a vector
+    if (!is.null(gbm.offset)) {
+      offset <- data[, gbm.offset]
+    } else {
+      # otherwise set it to null
+      offset <- NULL
+    }
+    
+    
     # try 'tries' times
     while (is.null(m) & tries < max_tries) {
       # fit the model, if it fails m will be NULL and the loop will continue
       m <- gbm.step(data = data,
                     gbm.x = gbm.x,
                     gbm.y = gbm.y,
+                    offset = offset,
                     step.size = 10,
                     tree.complexity = tree.complexity,
                     verbose = verbose,
@@ -912,6 +924,7 @@ runBRT <- function (data,
                     keep.fold.models = TRUE, 
                     keep.fold.vector = TRUE,
                     keep.fold.fit = TRUE,
+                    family = family,
                     ...)
       
       # add one to the tries counter
@@ -927,10 +940,18 @@ runBRT <- function (data,
     
   } else if (method == 'perf') {
     
+    # set up formula
+    # if the family is poisson and there's an offset, add it to the formula
+    if (!is.null(gbm.offset)) {
+      f <- data[, gbm.y] ~ . + offset(data[, gbm.offset])
+    } else {
+      f <- data[, gbm.y] ~ .    
+    }
+    
     # if using gbm.perf, run a single BRT with max.trees trees
     
-    m <- gbm(data[, gbm.y] ~ .,
-#              distribution = 'bernoulli',
+    m <- gbm(f,
+             distribution = family,
              data = data[, gbm.x],
              n.trees = max.trees,
              cv.folds = n.folds,
@@ -962,10 +983,18 @@ runBRT <- function (data,
     m$n.trees <- ntree
     
     } else {
+
+      # set up formula
+      # if the family is poisson and there's an offset, add it to the formula
+      if (!is.null(gbm.offset)) {
+        f <- data[, gbm.y] ~ . + offset(data[, gbm.offset])
+      } else {
+        f <- data[, gbm.y] ~ .    
+      }
       
       # otherwise run a single model with n.trees trees
-      m <- gbm(data[, gbm.y] ~ .,
-#                distribution = 'bernoulli',
+      m <- gbm(f,
+               distribution = family,
                data = data[, gbm.x],
                n.trees = n.trees,
                cv.folds = n.folds,

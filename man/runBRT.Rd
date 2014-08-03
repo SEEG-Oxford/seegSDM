@@ -32,6 +32,8 @@ runBRT(data,
        max.trees = 10000,
        step.size = 10,
        method = c('step', 'perf', 'gbm'),
+       family = 'bernoulli',
+       gbm.offset = NULL,
        ...)
 }
 
@@ -84,6 +86,12 @@ Passed to \code{gbm.step}, number of trees to add at each iteration.
   \item{method}{
 Whether to run the model using the \code{gbm.step} procedure (\code{method = 'step'}) to automatically detect the number of trees (the default), the \code{\link{gbm.perf}} procedure using cross-validation post-hoc \code{method = 'perf'} (much faster) or a simple \code{gbm} model with a the number of trees fixed at code{n.trees} \code{method = 'gbm'} (even faster, but potentially less accurate). Both \code{'step'} amd \code{'perf'} will fit up to a maximum of\code{max.trees} trees.
 } 
+  \item{family}{
+The probability distribution for the likelihood, passed to either the \code{family} argument of \code{gbm.step} (if \code{method  = 'step'}) or the \code{distribution} argument of \code{gbm} (if \code{method = 'perf'} or \code{method = 'gbm'}).
+}
+  \item{gbm.offset}{
+If \code{family = 'poisson'}, \code{gbm.offset} can be used to specify a column of \code{data} giving an offset, passed as the \code{offset} argument to either \code{gbm} or \code{gbm.step}, (depending on \code{method}).
+}
   \item{\dots}{
 Additional functions to pass to \code{gbm.step}.
 }

@@ -1171,7 +1171,10 @@ getEffectPlots <- function (models,
   return(effects)
 }
 
-combinePreds <- function (preds, quantiles = c(0.025, 0.975))
+combinePreds <- function (preds,
+                          quantiles = c(0.025, 0.975),
+                          parallel = FALSE,
+                          ncore = NULL)
   # function to calculate mean, median and quantile raster layers for
   # ensemble predictions given a rasterBrick or rasterStack where each
   # layer is a single ensemble prediction.
@@ -1187,10 +1190,75 @@ combinePreds <- function (preds, quantiles = c(0.025, 0.975))
   
   stopifnot(nlayers(preds) > 1)
   
-  ans <- calc(preds, fun = combine)
+  # parallel version
+  if (parallel) {
+    
+    # if the user spcified the number of cores
+    if (!is.null(ncore)) {
+      
+      # check the maximum number of cores
+      max_cores <- detectCores()
+      
+      if (ncore > max_cores) {
+        warning(paste0('ncore = ',
+                       ncore,
+                       'specified, but this machine only appears to have ',
+                       max_cores,
+                       ' cores so using ',
+                       max_cores,
+                       ' instead'))
+        
+        ncore <- max_cores
+              
+      }
+      
+    } else if (sfIsRunning()) {
+        # if user didn't specify the number of cores and
+        # if a snowfall cluster is running, use that number of cores
+        
+        # get the number of cpus
+        ncore <- sfCpus()
+        
+        cat(paste0('\nrunning combinePreds on ',
+                   ncore,
+                   ' cores\n\n'))
+    } else {
+      # if no user specified valu or snowfall cluster running, run on 1 core
+      warning("ncore wasn't specified and a snowfall cluster doesn't appear to be running\
+, so only running on one core")
+
+      ncore <- 1
+      
+    }
+    
+    # start the snow cluster
+    beginCluster(ncore)
+    
+    # set up function
+    clusterFun <- function (x) {
+      calc(x,
+           fun = combine)
+    }
+    
+    # run this function 
+    ans <- clusterR(preds,
+                    clusterFun)
+    
+    # turn off the snow cluster
+    endCluster()
+    
+  } else {
+
+    # otherwise run sequentially
+    ans <- calc(preds,
+                fun = combine)
+  }
   
+  # assign names to output
+  names(ans)[1:2] <- c('mean', 'median')
   names(ans)[3:nlayers(ans)] <- paste0('quantile_', quantiles)
   
+  # and return
   return(ans)
   
 }

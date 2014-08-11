@@ -18,6 +18,7 @@ runABRAID(occurrence_path,
           discrete = rep(FALSE, length(covariate_path)),
           verbose = TRUE,
           max_cpus = 32,
+          load_seegSDM = function(){ library(seegSDM) },
           parallel_flag = TRUE)
 }
 

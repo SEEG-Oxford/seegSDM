@@ -2103,8 +2103,6 @@ runABRAID <- function (occurrence_path,
   if (verbose) {
     cat('statistics extracted\n\n')
   }
-  # stop the cluster
-  sfStop()
   
   # combine and output results
   
@@ -2156,7 +2154,10 @@ runABRAID <- function (occurrence_path,
   preds <- stack(preds)
   
   # summarize predictions
-  preds <- combinePreds(preds)
+  preds <- combinePreds(preds, parallel = TRUE)
+  
+  # stop the cluster
+  sfStop()
   
   # get the width of the 95% confidence envelope as a metric of uncertainty
   uncertainty <- preds[[4]] - preds[[3]]

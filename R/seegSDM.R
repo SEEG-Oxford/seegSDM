@@ -92,55 +92,77 @@ auc2 <- function (DATA,
 # the first column and (0, 1] predictions in the second
 calcStats <- function(df) {
   
-  # ad an id column (needed for PresenceAbsence functions)
-  df <- data.frame(id = 1:nrow(df), df)
-  
-  # ~~~~~~~~~~~
-  # copntinuous probability metrics
-  
-  # bernoulli deviance
-  dev <- devBern(df[, 2], df[, 3])
-  
-  # root mean squared error
-  rmse <- rmse(df[, 2], df[, 3])
-  
-  # auc (using my safe version - see above)
-  auc <- auc2(df, st.dev = TRUE)
-  
-  # ~~~~~~~~~~~  
-  # discrete classification metrics
-  
-  # calculate the 'optimum' threshold - one at which sensitivity == specificity
-  opt <- optimal.thresholds(df, threshold = 101, which.model = 1, 
-                            opt.methods = 3)
-  
-  # create confusiuon matrix at this threshold
-  confusion <- cmx(df, threshold = opt[1, 2])
-  
-  # kappa (using threshold)
-  kappa <- Kappa(confusion, st.dev = TRUE)
-  
-  # sensitivity and specificity using threshold
-  sens <- sensitivity(confusion, st.dev = TRUE)
-  spec <- specificity(confusion, st.dev = TRUE)
-  
-  # proportion correctly classified using threshold
-  pcc <- pcc(confusion, st.dev = TRUE)
-  
-  # create results vector
-  results <- c(deviance = dev,
-               rmse = rmse,
-               kappa = kappa[, 1],
-               auc = auc[, 1],
-               sens = sens[, 1],
-               spec = spec[, 1],
-               pcc = pcc[, 1],
-               kappa_sd = kappa[, 2],
-               auc_sd = auc[, 2],
-               sens_sd = sens[, 2],
-               spec_sd = spec[, 2],
-               pcc_sd = pcc[, 2],
-               thresh = opt[1, 2])
+  # if any elements of df are NAs, return NAs
+  if (any(is.na(df))) {
+    
+    results <- c(deviance = NA,
+                 rmse = NA,
+                 kappa = NA,
+                 auc = NA,
+                 sens = NA,
+                 spec = NA,
+                 pcc = NA,
+                 kappa_sd = NA,
+                 auc_sd = NA,
+                 sens_sd = NA,
+                 spec_sd = NA,
+                 pcc_sd = NA,
+                 thresh = NA)
+    
+  } else {
+    
+    # add an id column (needed for PresenceAbsence functions)
+    df <- data.frame(id = 1:nrow(df), df)
+    
+    # ~~~~~~~~~~~
+    # copntinuous probability metrics
+    
+    # bernoulli deviance
+    dev <- devBern(df[, 2], df[, 3])
+    
+    # root mean squared error
+    rmse <- rmse(df[, 2], df[, 3])
+    
+    # auc (using my safe version - see above)
+    auc <- auc2(df, st.dev = TRUE)
+    
+    # ~~~~~~~~~~~  
+    # discrete classification metrics
+    
+    # calculate the 'optimum' threshold - one at which sensitivity == specificity
+    opt <- optimal.thresholds(df, threshold = 101, which.model = 1, 
+                              opt.methods = 3)
+    
+    # create confusiuon matrix at this threshold
+    confusion <- cmx(df, threshold = opt[1, 2])
+    
+    # kappa (using threshold)
+    kappa <- Kappa(confusion, st.dev = TRUE)
+    
+    # sensitivity and specificity using threshold
+    sens <- sensitivity(confusion, st.dev = TRUE)
+    spec <- specificity(confusion, st.dev = TRUE)
+    
+    # proportion correctly classified using threshold
+    pcc <- pcc(confusion, st.dev = TRUE)
+    
+    # create results vector
+    results <- c(deviance = dev,
+                 rmse = rmse,
+                 kappa = kappa[, 1],
+                 auc = auc[, 1],
+                 sens = sens[, 1],
+                 spec = spec[, 1],
+                 pcc = pcc[, 1],
+                 kappa_sd = kappa[, 2],
+                 auc_sd = auc[, 2],
+                 sens_sd = sens[, 2],
+                 spec_sd = spec[, 2],
+                 pcc_sd = pcc[, 2],
+                 thresh = opt[1, 2])
+    
+    
+  }
   
   # and return it
   return (results)
@@ -234,9 +256,23 @@ getStats <-
         
         keep <- c(test_p[keep_p], test_a[keep_a])
         
-        # add an evaluation dataframe to list
-        preds[[i]] <- data.frame(PA = y.data[keep],
-                                 pred = pred[keep])
+        # handle the case that pwdSample returns NAs
+        if (length(keep) == 0) {
+          
+          # if so, return NAs too
+          preds[[i]] <- data.frame(PA = rep(NA, length(keep)),
+                                   pred = rep(NA, length(keep)))
+          
+          # and issue a warning
+          warning (paste0('failed to carry out pwd sampling in submodel ',
+                          i))
+          
+        } else {
+          
+          # add an evaluation dataframe to list
+          preds[[i]] <- data.frame(PA = y.data[keep],
+                                   pred = pred[keep])
+        }
         
       }
       
@@ -983,7 +1019,7 @@ runBRT <- function (data,
     m$n.trees <- ntree
     
     } else {
-
+      
       # set up formula
       # if the family is poisson and there's an offset, add it to the formula
       if (!is.null(gbm.offset)) {
@@ -1209,24 +1245,24 @@ combinePreds <- function (preds,
                        ' instead'))
         
         ncore <- max_cores
-              
+        
       }
       
     } else if (sfIsRunning()) {
-        # if user didn't specify the number of cores and
-        # if a snowfall cluster is running, use that number of cores
-        
-        # get the number of cpus
-        ncore <- sfCpus()
-        
-        cat(paste0('\nrunning combinePreds on ',
-                   ncore,
-                   ' cores\n\n'))
+      # if user didn't specify the number of cores and
+      # if a snowfall cluster is running, use that number of cores
+      
+      # get the number of cpus
+      ncore <- sfCpus()
+      
+      cat(paste0('\nrunning combinePreds on ',
+                 ncore,
+                 ' cores\n\n'))
     } else {
       # if no user specified valu or snowfall cluster running, run on 1 core
       warning("ncore wasn't specified and a snowfall cluster doesn't appear to be running\
-, so only running on one core")
-
+              , so only running on one core")
+      
       ncore <- 1
       
     }
@@ -1248,7 +1284,7 @@ combinePreds <- function (preds,
     endCluster()
     
   } else {
-
+    
     # otherwise run sequentially
     ans <- calc(preds,
                 fun = combine)

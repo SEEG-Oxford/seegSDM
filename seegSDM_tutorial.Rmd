@@ -34,7 +34,7 @@ library(devtools)
 This version isn't on CRAN yet, so you'll need to install it from github first.
 
 ```{r message=FALSE}
-install_github('pdmetcalfe/gbm')
+install_github('harrysouthworth/gbm')
 ```
 
 Now we can use ```install_github``` to install ```seegSDM``` and then load the package

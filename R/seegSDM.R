@@ -2038,13 +2038,13 @@ runABRAID <- function (occurrence_path,
   # for dengue.
   
   # number of pseudo-absences per occurrence
-  na <- c(1, 4)# , 8, 12)
+  na <- c(1, 4, 8, 12)
   
   # number of pseudo-presences per occurrence
-  np <- c(0)# , 0.025, 0.05, 0.075)
+  np <- c(0, 0.025, 0.05, 0.075)
   
   # maximum distance from occurrence data
-  mu <- c(10)# , 20, 30, 40)
+  mu <- c(10, 20, 30, 40)
   
   # get all combinations of these
   pars <- expand.grid(na = na,

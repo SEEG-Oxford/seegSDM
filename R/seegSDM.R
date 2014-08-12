@@ -92,58 +92,81 @@ auc2 <- function (DATA,
 # the first column and (0, 1] predictions in the second
 calcStats <- function(df) {
   
-  # ad an id column (needed for PresenceAbsence functions)
-  df <- data.frame(id = 1:nrow(df), df)
+  # if there are any NAs,return NAs
+  if (any(is.na(df))) {
+
+    results <- c(deviance = NA,
+                 rmse = NA,
+                 kappa = NA,
+                 auc = NA,
+                 sens = NA,
+                 spec = NA,
+                 pcc = NA,
+                 kappa_sd = NA,
+                 auc_sd = NA,
+                 sens_sd = NA,
+                 spec_sd = NA,
+                 pcc_sd = NA,
+                 thresh = NA)
+
+  } else {
+    # otherwise return all the statistics
+    
+    # add an id column (needed for PresenceAbsence functions)
+    df <- data.frame(id = 1:nrow(df), df)
+    
+    # ~~~~~~~~~~~
+    # copntinuous probability metrics
+    
+    # bernoulli deviance
+    dev <- devBern(df[, 2], df[, 3])
+    
+    # root mean squared error
+    rmse <- rmse(df[, 2], df[, 3])
   
-  # ~~~~~~~~~~~
-  # copntinuous probability metrics
+    # auc (using my safe version - see above)
+    auc <- auc2(df, st.dev = TRUE)
+    
+    # ~~~~~~~~~~~  
+    # discrete classification metrics
+    
+    # calculate the 'optimum' threshold - one at which sensitivity == specificity
+    opt <- optimal.thresholds(df, threshold = 101, which.model = 1, 
+                              opt.methods = 3)
+    
+    # create confusiuon matrix at this threshold
+    confusion <- cmx(df, threshold = opt[1, 2])
   
-  # bernoulli deviance
-  dev <- devBern(df[, 2], df[, 3])
-  
-  # root mean squared error
-  rmse <- rmse(df[, 2], df[, 3])
-  
-  # auc (using my safe version - see above)
-  auc <- auc2(df, st.dev = TRUE)
-  
-  # ~~~~~~~~~~~  
-  # discrete classification metrics
-  
-  # calculate the 'optimum' threshold - one at which sensitivity == specificity
-  opt <- optimal.thresholds(df, threshold = 101, which.model = 1, 
-                            opt.methods = 3)
-  
-  # create confusiuon matrix at this threshold
-  confusion <- cmx(df, threshold = opt[1, 2])
-  
-  # kappa (using threshold)
-  kappa <- Kappa(confusion, st.dev = TRUE)
-  
-  # sensitivity and specificity using threshold
-  sens <- sensitivity(confusion, st.dev = TRUE)
-  spec <- specificity(confusion, st.dev = TRUE)
-  
-  # proportion correctly classified using threshold
-  pcc <- pcc(confusion, st.dev = TRUE)
-  
-  # create results vector
-  results <- c(deviance = dev,
-               rmse = rmse,
-               kappa = kappa[, 1],
-               auc = auc[, 1],
-               sens = sens[, 1],
-               spec = spec[, 1],
-               pcc = pcc[, 1],
-               kappa_sd = kappa[, 2],
-               auc_sd = auc[, 2],
-               sens_sd = sens[, 2],
-               spec_sd = spec[, 2],
-               pcc_sd = pcc[, 2],
-               thresh = opt[1, 2])
+    # kappa (using threshold)
+    kappa <- Kappa(confusion, st.dev = TRUE)
+    
+    # sensitivity and specificity using threshold
+    sens <- sensitivity(confusion, st.dev = TRUE)
+    spec <- specificity(confusion, st.dev = TRUE)
+    
+    # proportion correctly classified using threshold
+    pcc <- pcc(confusion, st.dev = TRUE)
+    
+    # create results vector
+    results <- c(deviance = dev,
+                 rmse = rmse,
+                 kappa = kappa[, 1],
+                 auc = auc[, 1],
+                 sens = sens[, 1],
+                 spec = spec[, 1],
+                 pcc = pcc[, 1],
+                 kappa_sd = kappa[, 2],
+                 auc_sd = auc[, 2],
+                 sens_sd = sens[, 2],
+                 spec_sd = spec[, 2],
+                 pcc_sd = pcc[, 2],
+                 thresh = opt[1, 2])
+    
+  }
   
   # and return it
   return (results)
+  
 }
 
 
@@ -159,7 +182,7 @@ getStats <-
             pwd = TRUE,
             threshold = 1,
             ...) {
-    
+
     # get observed data
     y.data <- object$model$data$y
     
@@ -173,7 +196,7 @@ getStats <-
     # and give them back their names
     names(x.data) <- colnames(object$model$data$x.order)
     
-    
+
     # if pair-wise distance sampling is required
     if (pwd) {
       
@@ -191,7 +214,7 @@ getStats <-
         stop ('Coordinates were not available to run the pwd procedure.
               To include coordinates provide them to runBRT via the gbm.coords argument, otherwise rerun getStats setting pwd = FALSE')
       }
-      
+            
       # get fold models
       models <- object$model$fold.models
       n.folds <- length(models)
@@ -226,86 +249,103 @@ getStats <-
         x <- pwdSample(object$coords[test_p, ],
                        object$coords[test_a, ],
                        object$coords[train_p, ],
-                       n = 1, tr = threshold, ...)
+                       n = 1,
+                       tr = threshold,
+                       ...)
+
+          # otherwise return the dataframe using the pwd pairs
+          keep_p <- which(!is.na(x[, 1]))
+          keep_a <- na.omit(x[, 1])
+          
+          keep <- c(test_p[keep_p], test_a[keep_a])
         
-        
-        keep_p <- which(!is.na(x[, 1]))
-        keep_a <- na.omit(x[, 1])
-        
-        keep <- c(test_p[keep_p], test_a[keep_a])
-        
-        # add an evaluation dataframe to list
-        preds[[i]] <- data.frame(PA = y.data[keep],
-                                 pred = pred[keep])
-        
+        # handle the case that pwdSample returns NAs
+        if (length(keep) == 0) {
+          
+          # if so, return NAs too
+          preds[[i]] <- data.frame(PA = rep(NA, length(keep)),
+                                   pred = rep(NA, length(keep)))
+          
+          # and issue a warning
+          warning (paste0('failed to carry out pwd sampling in submodel ',
+                          i))
+          
+        } else {
+          
+          # add an evaluation dataframe to list
+          preds[[i]] <- data.frame(PA = y.data[keep],
+                                   pred = pred[keep])
+        }
       }
       
       # calculate cv statistics for all folds
-      stats <- t(sapply(preds, calcStats))
+      stats <- t(sapply(preds,
+                        calcStats))
       
       # return the mean of these
-      return (colMeans(stats))
-      
+      return (colMeans(stats,
+                       na.rm = TRUE))
+
       # with return statement
       
-      } else {  # close pwd if
+    } else {  # close pwd if
+      
+      # if pair-wise sampling isn't required
+      
+      # if the overall training validation stats are required
+      if (!cv) {
         
-        # if pair-wise sampling isn't required
+        model <- object$model
+  
+        # predicted probabilities 
+        pred <- predict(model,
+                        x.data,
+                        n.trees = model$n.trees,
+                        type = 'response')
         
-        # if the overall training validation stats are required
-        if (!cv) {
+        stats <- calcStats(data.frame(y.data,
+                                      pred))
+        
+        return (stats)
+        
+      } else {  # close cv if
+        # otherwise, for cv stats
+        
+        models <- object$model$fold.models
+        
+        n.folds <- length(models)
+        
+        # get fold vector
+        fold_vec <- object$model$fold.vector
+        
+        # blank list to populate
+        preds <- list()
+        
+        # loop through the folds
+        for (i in 1:n.folds) {
           
-          model <- object$model
+          # fold-specific mask
+          mask <- fold_vec == i
           
-          # predicted probabilities 
-          pred <- predict(model,
-                          x.data,
-                          n.trees = model$n.trees,
-                          type = 'response')
+          # predicted probabilities for that model 
+          pred <- predict.gbm(models[[i]],
+                              x.data[mask, ],
+                              n.trees = models[[i]]$n.trees,
+                              type = 'response')
           
-          stats <- calcStats(data.frame(y.data,
-                                        pred))
+          # add an evaluation dataframe to list
+          preds[[i]] <- data.frame(y.data[mask],
+                                   pred)
           
-          return (stats)
-          
-        } else {  # close cv if
-          # otherwise, for cv stats
-          
-          models <- object$model$fold.models
-          
-          n.folds <- length(models)
-          
-          # get fold vector
-          fold_vec <- object$model$fold.vector
-          
-          # blank list to populate
-          preds <- list()
-          
-          # loop through the folds
-          for (i in 1:n.folds) {
-            
-            # fold-specific mask
-            mask <- fold_vec == i
-            
-            # predicted probabilities for that model 
-            pred <- predict.gbm(models[[i]],
-                                x.data[mask, ],
-                                n.trees = models[[i]]$n.trees,
-                                type = 'response')
-            
-            # add an evaluation dataframe to list
-            preds[[i]] <- data.frame(y.data[mask],
-                                     pred)
-            
-          }
-          
-          # calculate cv statistics for all folds
-          stats <- t(sapply(preds, calcStats))
-          
-          # return the mean of these
-          return (colMeans(stats))
-        } # close pwd = FALSE, cv else
-      }# close pwd else
+        }
+        
+        # calculate cv statistics for all folds
+        stats <- t(sapply(preds, calcStats))
+        
+        # return the mean of these
+        return (colMeans(stats))
+      } # close pwd = FALSE, cv else
+    }# close pwd else
   }
 
 # checking inputs
@@ -809,17 +849,19 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
       # clone the admin layer we want
       ad <- admin[[level + 1]]
       
-      # define a function to mask out pixels which aren't to be reclassified
-      keep <- function(cells, ...) {
-        ifelse(cells %in% level_GAULs,
-               cells,
-               NA)
-      }
+      # get all (and possibly some excess) unique GAUL codes
+      level_all_codes <- ad@data@min : ad@data@max
       
-      # use the function to mask out unwanted regions and speed up `zonal`
-      ad <- calc(ad, keep)
+      # remove the ones we *do* want from this list, by index
+      level_all_codes <- level_all_codes[-(level_GAULs - ad@data@min + 1)]
       
-      # extract values for each zone, aggregating by `fun`
+      # then reclassify ad to mask out the ones we don't want
+      # this *should* speed up the zonal operation
+      ad <- reclassify(ad,
+                       cbind(level_all_codes,
+                             rep(NA, length(level_all_codes))))
+      
+      # extract values for each zone, aggregating by 'fun'
       zones <- zonal(covariates, ad, fun = fun)
       
       # match them to polygons
@@ -838,35 +880,23 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 }
 
 
-runBRT <- function (data,
-                    gbm.x,
-                    gbm.y,
-                    pred.raster,
+runBRT <- function (data, gbm.x, gbm.y, pred.raster,
                     gbm.coords = NULL,
                     wt = NULL,
-                    max_tries = 5,
-                    verbose = FALSE,
-                    tree.complexity = 4,
-                    learning.rate = 0.005,
-                    bag.fraction = 0.75,
-                    n.trees = 10,
-                    n.folds = 10,
-                    max.trees = 10000,
-                    step.size = 10,
-                    method = c('step', 'perf', 'gbm'),
-                    family = 'bernoulli',
-                    gbm.offset = NULL,
-                    ...)
-
-# wrapper to run a BRT model with Sam's defaults
-# and return covariate effects, relative influence,
-# and a prediction map (on the probability scale).
-# background points are weighted at 4 * presence points,
-# mimicking prevalence of 0.2
-{
+                    max_tries = 5, verbose = FALSE,
+                    tree.complexity = 4, learning.rate = 0.005,
+                    bag.fraction = 0.75, n.trees = 10,
+                    n.folds = 10, max.trees = 40000,
+                    step.size = 10, step = TRUE, ...)
   
-  # get the required method
-  method <- match.arg(method)
+  # wrapper to run a BRT model with Sam's defaults
+  # and return covariate effects, relative influence,
+  # and a prediction map (on the probability scale).
+  # background points are weighted at 4 * presence points,
+  # mimicking prevalence of 0.2
+{
+  # keep running until model isn't null
+  # (can happen with wrong leaning rate etc.)
   
   # calculate weights
   if (is.null(wt)) {
@@ -886,24 +916,12 @@ runBRT <- function (data,
     stop('wt must either be NULL, a function, a vector of weights or a column index')
   }
   
-  # if using gbm.step
-  if (method == 'step') {
-    
-    # we'll need to use a while loop to tweak the parameters ontil the
-    # algorithm converges
+  if (step) {
+    # if using gbm.step
     
     # set up for the while loop
     m <- NULL
     tries <- 0
-    
-    # if there's an offset, get it as a vector
-    if (!is.null(gbm.offset)) {
-      offset <- data[, gbm.offset]
-    } else {
-      # otherwise set it to null
-      offset <- NULL
-    }
-    
     
     # try 'tries' times
     while (is.null(m) & tries < max_tries) {
@@ -911,7 +929,6 @@ runBRT <- function (data,
       m <- gbm.step(data = data,
                     gbm.x = gbm.x,
                     gbm.y = gbm.y,
-                    offset = offset,
                     step.size = 10,
                     tree.complexity = tree.complexity,
                     verbose = verbose,
@@ -924,7 +941,6 @@ runBRT <- function (data,
                     keep.fold.models = TRUE, 
                     keep.fold.vector = TRUE,
                     keep.fold.fit = TRUE,
-                    family = family,
                     ...)
       
       # add one to the tries counter
@@ -938,86 +954,32 @@ runBRT <- function (data,
                   'attempts, try reducing the step.size or learning rate'))
     }
     
-  } else if (method == 'perf') {
+  } else {
+    # if not stepping, run a single BRT with n.trees trees
     
-    # set up formula
-    # if the family is poisson and there's an offset, add it to the formula
-    if (!is.null(gbm.offset)) {
-      f <- data[, gbm.y] ~ . + offset(data[, gbm.offset])
-    } else {
-      f <- data[, gbm.y] ~ .    
-    }
-    
-    # if using gbm.perf, run a single BRT with max.trees trees
-    
-    m <- gbm(f,
-             distribution = family,
+    m <- gbm(data[, gbm.y] ~ .,
+             distribution = 'bernoulli',
              data = data[, gbm.x],
-             n.trees = max.trees,
-             cv.folds = n.folds,
+             n.trees = n.trees,
              interaction.depth = tree.complexity,
              verbose = verbose,
              shrinkage = learning.rate,
              bag.fraction = bag.fraction,
              weights = wt,
              ...)
-    
-    # and run the gbm.perf procedure to select the optimal
-    # number of trees
-    ntree <- gbm.perf(m,
-                      plot.it = FALSE,
-                      method = 'cv')
-    
-    # if the best number of trees is also the maximum number of trees,
-    # issue a warning
-    
-    if (ntree == n.trees) {
-      warning(paste0('The optimal number of trees by cross fold validation\
-                     using gbm.perf was ',
-                     ntree,
-                     ', the same as the maximum number of trees.
-                     You may get a better model fit if you increase n.trees.'))
-    }
-    
-    # set the number of trees in the model to the optimal
-    m$n.trees <- ntree
-    
-    } else {
-
-      # set up formula
-      # if the family is poisson and there's an offset, add it to the formula
-      if (!is.null(gbm.offset)) {
-        f <- data[, gbm.y] ~ . + offset(data[, gbm.offset])
-      } else {
-        f <- data[, gbm.y] ~ .    
-      }
-      
-      # otherwise run a single model with n.trees trees
-      m <- gbm(f,
-               distribution = family,
-               data = data[, gbm.x],
-               n.trees = n.trees,
-               cv.folds = n.folds,
-               interaction.depth = tree.complexity,
-               verbose = verbose,
-               shrinkage = learning.rate,
-               bag.fraction = bag.fraction,
-               weights = wt,
-               ...)
-      
-    }
+  }
   
   # get effect plots
   effects <- lapply(1:length(gbm.x),
-                    function(i) {
-                      plot(m,
-                           i,
-                           return.grid = TRUE)
-                    })
+                   function(i) {
+                     plot(m,
+                          i,
+                          return.grid = TRUE)
+                   })
   
   # get relative influence
   relinf <- summary(m,
-                    plotit = FALSE)
+                   plotit = FALSE)
   
   # get prediction raster
   pred = predict(pred.raster,
@@ -1117,7 +1079,7 @@ getEffectPlots <- function (models,
     mn <- rowMeans(y, na.rm = TRUE)
     # and quantiles
     qs <- t(apply(y, 1, quantile, quantiles, na.rm = TRUE))
-    
+
     # and return these alond with the raw data
     return (cbind(covariate = x,
                   mean = mn,
@@ -1171,10 +1133,7 @@ getEffectPlots <- function (models,
   return(effects)
 }
 
-combinePreds <- function (preds,
-                          quantiles = c(0.025, 0.975),
-                          parallel = FALSE,
-                          ncore = NULL)
+combinePreds <- function (preds, quantiles = c(0.025, 0.975))
   # function to calculate mean, median and quantile raster layers for
   # ensemble predictions given a rasterBrick or rasterStack where each
   # layer is a single ensemble prediction.
@@ -1190,75 +1149,10 @@ combinePreds <- function (preds,
   
   stopifnot(nlayers(preds) > 1)
   
-  # parallel version
-  if (parallel) {
-    
-    # if the user spcified the number of cores
-    if (!is.null(ncore)) {
-      
-      # check the maximum number of cores
-      max_cores <- detectCores()
-      
-      if (ncore > max_cores) {
-        warning(paste0('ncore = ',
-                       ncore,
-                       'specified, but this machine only appears to have ',
-                       max_cores,
-                       ' cores so using ',
-                       max_cores,
-                       ' instead'))
-        
-        ncore <- max_cores
-              
-      }
-      
-    } else if (sfIsRunning()) {
-        # if user didn't specify the number of cores and
-        # if a snowfall cluster is running, use that number of cores
-        
-        # get the number of cpus
-        ncore <- sfCpus()
-        
-        cat(paste0('\nrunning combinePreds on ',
-                   ncore,
-                   ' cores\n\n'))
-    } else {
-      # if no user specified valu or snowfall cluster running, run on 1 core
-      warning("ncore wasn't specified and a snowfall cluster doesn't appear to be running\
-, so only running on one core")
-
-      ncore <- 1
-      
-    }
-    
-    # start the snow cluster
-    beginCluster(ncore)
-    
-    # set up function
-    clusterFun <- function (x) {
-      calc(x,
-           fun = combine)
-    }
-    
-    # run this function 
-    ans <- clusterR(preds,
-                    clusterFun)
-    
-    # turn off the snow cluster
-    endCluster()
-    
-  } else {
-
-    # otherwise run sequentially
-    ans <- calc(preds,
-                fun = combine)
-  }
+  ans <- calc(preds, fun = combine)
   
-  # assign names to output
-  names(ans)[1:2] <- c('mean', 'median')
   names(ans)[3:nlayers(ans)] <- paste0('quantile_', quantiles)
   
-  # and return
   return(ans)
   
 }
@@ -1561,7 +1455,7 @@ biasGrid <- function(polygons, raster, sigma = 30)
     x@Polygons[[1]]@area
   }) / prod(res(raster))
   ras <- rasterize(polygons, ras, field = 1/areas,
-                   fun = 'sum', update = TRUE)
+                   fun = sum, update = TRUE)
   # get sigma in pixels
   sigma <- ceiling(sigma / mean(res(raster)))
   # use a window of 5 * sigma
@@ -1889,257 +1783,4 @@ splitIdx <- function (n, maxn = 1000) {
   start <- 1 + (1:bins - 1) * maxn
   end <- c(start[-1] - 1, n)
   lapply(1:bins, function(i) c(start[i], end[i]))
-}
-
-runABRAID <- function (occurrence_path,
-                       extent_path,
-                       admin1_path,
-                       admin2_path,
-                       covariate_path,
-                       discrete = rep(FALSE,
-                                      length(covariate_path)),
-                       verbose = TRUE,
-                       max_cpus = 32,
-                       load_seegSDM = function(){ library(seegSDM) },
-                       parallel_flag = TRUE) {
-  
-  # Given the locations of: a csv file containing disease occurrence data
-  # (`occurrence_path`, a character), an ASCII raster giving the definitive
-  # extents of the disease (`extent_path`, a character), and ASCII rasters
-  # giving standardised admin units (`admin_path`; these *must* be in
-  # ascending order) and the ASCII rasters giving the covariates to use
-  # (`covariate_path`, a character vector). Run a predictive model to produce
-  # a risk map (and associated outputs) for the disease.
-  # The file given by `occurrence_path` must contain the columns 'Longitude',
-  # 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree
-  # of weighting to assign to each occurrence record), 'Admin' (giving the
-  # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points)
-  # and 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
-  # NA for points).
-  # To treat any covariates as discrete variables, provide a logical vector
-  # `discrete` with `TRUE` if the covariate is a discrete variable and `FALSE`
-  # otherwise. By default, all covariates are assumed to be continuous.
-  # Set the maximum number of CPUs to use with `max_cpus`. At present runABRAID
-  # runs 64 bootstrap submodels, so the number of cpus used in the cluster will
-  # be set at `min(64, max_cpus)`.
-  
-  # ~~~~~~~~
-  # lambda functions  
-  sub <- function(i, pars) {
-    # get the $i^{th}$ row of pars 
-    pars[i, ]
-  }
-  
-  # ~~~~~~~~
-  # check inputs are of the correct type and files exist
-  stopifnot(class(occurrence_path) == 'character' &&
-              file.exists(occurrence_path))
-  
-  stopifnot(class(extent_path) == 'character' &&
-              file.exists(extent_path))
-  
-  stopifnot(file.exists(admin1_path))
-  
-  stopifnot(file.exists(admin2_path))
-  
-  stopifnot(class(covariate_path) == 'character' &&
-              all(file.exists(covariate_path)))
-  
-  stopifnot(class(verbose) == 'logical')
-  
-  stopifnot(class(discrete) == 'logical' &&
-              length(discrete == length(covariate_path)))
-  
-  stopifnot(is.function(load_seegSDM))
-  
-  stopifnot(is.logical(parallel_flag))
-  
-  # ~~~~~~~~
-  # load data
-  
-  # occurrence data
-  occurrence <- read.csv(occurrence_path,
-                         stringsAsFactors = FALSE)
-  
-  # check column names are as expected
-  stopifnot(sort(colnames(occurrence)) == c('Admin',
-                                            'GAUL',
-                                            'Latitude',
-                                            'Longitude',
-                                            'Weight'))
-  
-  # convert it to a SpatialPointsDataFrame
-  # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
-  occurrence <- occurrence2SPDF(occurrence)
-  
-  # load the definitve extent raster
-  extent <- raster(extent_path)
-  
-  # load the admin rasters as a stack
-  # Note the horrible hack of specifying admin 0
-  # and admin 3 as the provided admin 1.
-  # These should be ignored since ABRAID should never contain anything other
-  # than levels 1 and 2
-  admin <- stack(c(admin1_path,
-                   admin1_path,
-                   admin2_path,
-                   admin1_path))
-  
-  # load covariate rasters into a stack
-  covariates <- stack(covariate_path)
-  
-  # set the coordinate systems for rasters as projected wgs84 (lat/long)
-  projection(covariates) <- wgs84(TRUE)
-  projection(extent) <- wgs84(TRUE)
-  projection(admin) <- wgs84(TRUE)
-  
-  
-  # ~~~~~~~~
-  # Generate pseudo-absence data  
-  
-  # set up range of parameters for use in `extractBhatt`
-  # use a similar, but reduced set to that used in Bhatt et al. (2013)
-  # for dengue.
-  
-  # number of pseudo-absences per occurrence
-  na <- c(1, 4)# , 8, 12)
-  
-  # number of pseudo-presences per occurrence
-  np <- c(0)# , 0.025, 0.05, 0.075)
-  
-  # maximum distance from occurrence data
-  mu <- c(10)# , 20, 30, 40)
-  
-  # get all combinations of these
-  pars <- expand.grid(na = na,
-                      np = np,
-                      mu = mu)
-  
-  # convert this into a list
-  par_list <- lapply(1:nrow(pars),
-                     sub,
-                     pars)
-  
-  # get the required number of cpus
-  ncpu <- min(length(par_list),
-              max_cpus)
-  
-  # start the cluster
-  sfInit(parallel = parallel_flag,
-         cpus = ncpu)
-  
-  # load seegSDM and dependencies on every cluster
-  sfClusterCall(load_seegSDM)
-  
-  if (verbose) {
-    cat('\nseegSDM loaded on cluster\n\n')
-  }
-  
-  # generate pseudo-data in parallel
-  data_list <- sfLapply(par_list,
-                        extractBhatt,
-                        occurrence = occurrence,
-                        covariates = covariates,
-                        consensus = extent,
-                        admin = admin, 
-                        factor = discrete)
-  
-  if (verbose) {
-    cat('extractBhatt done\n\n')
-  }
-  
-  # run BRT submodels in parallel
-  model_list <- sfLapply(data_list,
-                         runBRT,
-                         gbm.x = 4:ncol(data_list[[1]]),
-                         gbm.y = 1,
-                         pred.raster = covariates,
-                         gbm.coords = 2:3,
-                         verbose = verbose)
-  
-  if (verbose) {
-    cat('model fitting done\n\n')
-  }
-  # get cross-validation statistics in parallel
-  stat_lis <- sfLapply(model_list,
-                       getStats)
-  
-  if (verbose) {
-    cat('statistics extracted\n\n')
-  }
-  # stop the cluster
-  sfStop()
-  
-  # combine and output results
-  
-  # make a results directory
-  dir.create('results')
-  
-  # cross-validation statistics (with pairwise-weighted distance sampling)
-  stats <- do.call("rbind", stat_lis)
-  
-  write.csv(stats,
-            'results/statistics.csv',
-            row.names = FALSE)
-  
-  # relative influence statistics
-  relinf <- getRelInf(model_list,
-                      plot = FALSE)
-  
-  write.csv(relinf,
-            'results/relative_influence.csv',
-            row.names = TRUE)
-  
-  # effect plots
-  
-  # set up plotting layout
-  rowcol <- n2mfrow(nlayers(covariates))
-  
-  # open plotting device
-  png('results/effect_plots.png',
-      height = rowcol[1] * 300,
-      width = rowcol[2] * 300)
-  
-  # set the plotting layout
-  par(mfrow = rowcol)
-  
-  # plot marginal effect curves
-  getEffectPlots(model_list,
-                 plot = TRUE)
-  
-  # turn off the plotting device
-  dev.off()
-  
-  # get summarized prediction raster layers
-  
-  # lapply to extract the predictions into a list
-  preds <- lapply(model_list,
-                  function(x) {x$pred})
-  
-  # coerce the list into a RasterStack
-  preds <- stack(preds)
-  
-  # summarize predictions
-  preds <- combinePreds(preds)
-  
-  # get the width of the 95% confidence envelope as a metric of uncertainty
-  uncertainty <- preds[[4]] - preds[[3]]
-  
-  # save the mean predicitons and uncerrtainty as rasters
-  writeRaster(preds[[1]],
-              'results/mean_prediction',
-              format = 'GTiff',
-              options = c("COMPRESS=DEFLATE",
-                          "ZLEVEL=9"),
-              overwrite = TRUE)
-  
-  writeRaster(uncertainty,
-              'results/prediction_uncertainty',
-              format = 'GTiff',
-              options = c("COMPRESS=DEFLATE",
-                          "ZLEVEL=9"),
-              overwrite = TRUE)
-  
-  # return an exit code of 0, as in the ABRAID-MP code
-  return (0)
 }

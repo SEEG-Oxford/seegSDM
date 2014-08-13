@@ -1228,6 +1228,7 @@ combinePreds <- function (preds,
   
   # parallel version
   if (parallel) {
+    skipClusterManagment <- FALSE
     
     # if the user spcified the number of cores
     if (!is.null(ncore)) {
@@ -1252,6 +1253,8 @@ combinePreds <- function (preds,
       # if user didn't specify the number of cores and
       # if a snowfall cluster is running, use that number of cores
       
+      skipClusterManagment <- TRUE
+      
       # get the number of cpus
       ncore <- sfCpus()
       
@@ -1268,7 +1271,9 @@ combinePreds <- function (preds,
     }
     
     # start the snow cluster
-    beginCluster(ncore)
+    if(!skipClusterManagment) {
+      beginCluster(ncore)
+    }
     
     # set up function
     clusterFun <- function (x) {
@@ -1281,8 +1286,9 @@ combinePreds <- function (preds,
                     clusterFun)
     
     # turn off the snow cluster
-    endCluster()
-    
+    if(!skipClusterManagment) {
+      endCluster()
+    }    
   } else {
     
     # otherwise run sequentially

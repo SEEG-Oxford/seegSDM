@@ -21,7 +21,7 @@ A \code{RasterBrick} or \code{RasterStack} object, where each layer is a single 
 A vector of length two giving the quantiles of the prediciton distribution to return.
 }
   \item{parallel}{
-Whether to run the function in parallel. The user can specify the number of cores to run on via the \code{ncore} argument, or if this is \code{NULL} and a \code{\link{snowfall}} cluster is running, the number of cores of that cluster will be used. If \code{parallel = TRUE} but \code{ncore} is not provided and a \code{snowfall} cluster isn't running, only one care will be used.
+Whether to run the function in parallel. The user can specify the number of cores to run on via the \code{ncore} argument, or if this is \code{NULL} and a \code{\link{snowfall}} cluster is running the existing cluster will be used. If \code{parallel = TRUE} but \code{ncore} is not provided and a \code{snowfall} cluster isn't running, only one core will be used.
 }
   \item{ncore}{
 If \code{parallel = TRUE} the number of cores to use, see \code{parallel} for details.

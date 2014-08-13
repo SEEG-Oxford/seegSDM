@@ -260,8 +260,8 @@ getStats <-
         if (length(keep) == 0) {
           
           # if so, return NAs too
-          preds[[i]] <- data.frame(PA = rep(NA, length(keep)),
-                                   pred = rep(NA, length(keep)))
+          preds[[i]] <- data.frame(PA = rep(NA, 3),
+                                   pred = rep(NA, 3))
           
           # and issue a warning
           warning (paste0('failed to carry out pwd sampling in submodel ',

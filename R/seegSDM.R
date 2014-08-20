@@ -1270,30 +1270,29 @@ combinePreds <- function (preds,
       
     }
     
-    # start the snow cluster
-    if(!skipClusterManagment) {
-      beginCluster(ncore)
-    }
-    
     # set up function
     clusterFun <- function (x) {
-      calc(x,
-           fun = combine)
+      calc(x, fun = combine)
     }
     
-    # run this function 
-    ans <- clusterR(preds,
-                    clusterFun)
     
-    # turn off the snow cluster
+    
     if(!skipClusterManagment) {
-      endCluster()
-    }    
-  } else {
+      # start the new snow cluster
+      beginCluster(ncore)
+      
+      # run the function on the new cluster
+      ans <- clusterR(preds, clusterFun)
     
-    # otherwise run sequentially
-    ans <- calc(preds,
-                fun = combine)
+      # turn off the new snow cluster
+      endCluster()
+    } else {
+      # run the function on the existing cluster
+      ans <- clusterR(preds, clusterFun, cl=sfGetCluster())
+    }   
+  } else {
+    # otherwise run the function sequentially
+    ans <- calc(preds, fun = combine)
   }
   
   # assign names to output

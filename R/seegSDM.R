@@ -2159,7 +2159,7 @@ runABRAID <- function (occurrence_path,
   preds <- stack(preds)
   
   # summarize predictions
-  preds <- combinePreds(preds, parallel = TRUE)
+  preds <- combinePreds(preds, parallel=parallel_flag)
   
   # stop the cluster
   sfStop()

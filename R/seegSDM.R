@@ -1228,6 +1228,7 @@ combinePreds <- function (preds,
   
   # parallel version
   if (parallel) {
+    skipClusterManagment <- FALSE
     
     # if the user spcified the number of cores
     if (!is.null(ncore)) {
@@ -1252,6 +1253,8 @@ combinePreds <- function (preds,
       # if user didn't specify the number of cores and
       # if a snowfall cluster is running, use that number of cores
       
+      skipClusterManagment <- TRUE
+      
       # get the number of cpus
       ncore <- sfCpus()
       
@@ -1267,27 +1270,29 @@ combinePreds <- function (preds,
       
     }
     
-    # start the snow cluster
-    beginCluster(ncore)
-    
     # set up function
     clusterFun <- function (x) {
-      calc(x,
-           fun = combine)
+      calc(x, fun = combine)
     }
     
-    # run this function 
-    ans <- clusterR(preds,
-                    clusterFun)
     
-    # turn off the snow cluster
-    endCluster()
     
+    if(!skipClusterManagment) {
+      # start the new snow cluster
+      beginCluster(ncore)
+      
+      # run the function on the new cluster
+      ans <- clusterR(preds, clusterFun)
+    
+      # turn off the new snow cluster
+      endCluster()
+    } else {
+      # run the function on the existing cluster
+      ans <- clusterR(preds, clusterFun, cl=sfGetCluster())
+    }   
   } else {
-    
-    # otherwise run sequentially
-    ans <- calc(preds,
-                fun = combine)
+    # otherwise run the function sequentially
+    ans <- calc(preds, fun = combine)
   }
   
   # assign names to output
@@ -2154,7 +2159,7 @@ runABRAID <- function (occurrence_path,
   preds <- stack(preds)
   
   # summarize predictions
-  preds <- combinePreds(preds, parallel = TRUE)
+  preds <- combinePreds(preds, parallel=parallel_flag)
   
   # stop the cluster
   sfStop()

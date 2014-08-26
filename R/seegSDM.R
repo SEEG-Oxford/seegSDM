@@ -2122,32 +2122,18 @@ runABRAID <- function (occurrence_path,
             row.names = FALSE)
   
   # relative influence statistics
-  relinf <- getRelInf(model_list,
-                      plot = FALSE)
+  relinf <- getRelInf(model_list)
   
   write.csv(relinf,
             'results/relative_influence.csv',
             row.names = TRUE)
   
-  # effect plots
+  # marginal effect curves
+  effects <- getEffectPlots(model_list)
   
-  # set up plotting layout
-  rowcol <- n2mfrow(nlayers(covariates))
-  
-  # open plotting device
-  png('results/effect_plots.png',
-      height = rowcol[1] * 300,
-      width = rowcol[2] * 300)
-  
-  # set the plotting layout
-  par(mfrow = rowcol)
-  
-  # plot marginal effect curves
-  getEffectPlots(model_list,
-                 plot = TRUE)
-  
-  # turn off the plotting device
-  dev.off()
+  write.csv(effects,
+            'results/effect_curves.csv',
+            row.names = TRUE)
   
   # get summarized prediction raster layers
   

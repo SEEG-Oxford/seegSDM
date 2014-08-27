@@ -2131,6 +2131,34 @@ runABRAID <- function (occurrence_path,
   # marginal effect curves
   effects <- getEffectPlots(model_list)
   
+  # convert the effect curve information into the required format
+  
+  # keep only the first four columns of each dataframe
+  effects <- lapply(effects,
+                    function (x) {
+                      x <- x[, 1:4]
+                      names(x) <- c('x',
+                                    'mean',
+                                    'lower',
+                                    'upper')
+                      return(x)
+                    })
+  
+  # paste the name of the covarate in as an extra column
+  for(i in 1:length(effects)) {
+    n <- nrow(effects[[i]])
+    name <- names(effects)[i]
+    effects[[i]] <- cbind(covariate = rep(name, n),
+                          effects[[i]])
+  }
+  
+  # combine these into a single dataframe
+  effects <- do.call(rbind, effects)
+  
+  # clean up the row names
+  rownames(effects) <- NULL
+  
+  # save the results
   write.csv(effects,
             'results/effect_curves.csv',
             row.names = TRUE)

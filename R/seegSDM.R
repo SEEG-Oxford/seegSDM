@@ -2119,6 +2119,7 @@ runABRAID <- function (occurrence_path,
   
   write.csv(stats,
             'results/statistics.csv',
+            na = "",
             row.names = FALSE)
   
   # relative influence statistics
@@ -2126,6 +2127,7 @@ runABRAID <- function (occurrence_path,
   
   write.csv(relinf,
             'results/relative_influence.csv',
+            na = "",
             row.names = TRUE)
   
   # marginal effect curves
@@ -2161,6 +2163,7 @@ runABRAID <- function (occurrence_path,
   # save the results
   write.csv(effects,
             'results/effect_curves.csv',
+            na = "",
             row.names = TRUE)
   
   # get summarized prediction raster layers

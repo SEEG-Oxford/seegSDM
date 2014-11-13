@@ -1937,6 +1937,7 @@ runABRAID <- function (occurrence_path,
                        admin1_path,
                        admin2_path,
                        covariate_path,
+                       covariate_names = NULL,
                        discrete = rep(FALSE,
                                       length(covariate_path)),
                        verbose = TRUE,
@@ -1963,6 +1964,8 @@ runABRAID <- function (occurrence_path,
   # Set the maximum number of CPUs to use with `max_cpus`. At present runABRAID
   # runs 64 bootstrap submodels, so the number of cpus used in the cluster will
   # be set at `min(64, max_cpus)`.
+  # `covariate_names` can optionally be passed to give a set of human readble
+  # names for the covariates
   
   # ~~~~~~~~
   # lambda functions  
@@ -1995,6 +1998,32 @@ runABRAID <- function (occurrence_path,
   
   stopifnot(is.logical(parallel_flag))
   
+  # if covariate_names isn't specified, use the file names
+  if (is.null(covariate_names)) {
+        
+    # split each string up by slashes
+    chunks <- strsplit(covariate_names, '/')
+    
+    # get the last element of each
+    ends <- unlist(lapply(chunks,
+                   function (x) x[length(x)]))
+    
+    # split these up at dots
+    end_chunks <- strsplit(ends, '\\.')
+    
+    # get rid of file suffixes
+    covariate_names <- unlist(lapply(end_chunks,
+                                     function (x) x[1]))
+      
+  } else {
+    
+    # otherwise check the specified names are valid
+    stopifnot(class(covariate_names) == 'character' &
+                length(covariate_names) == length(covariate_path))
+    
+  }
+  
+    
   # ~~~~~~~~
   # load data
   
@@ -2028,6 +2057,9 @@ runABRAID <- function (occurrence_path,
   
   # load covariate rasters into a stack
   covariates <- stack(covariate_path)
+  
+  # name these with numbers
+  names(covariates) <- seq(nlayers(covariates))
   
   # set the coordinate systems for rasters as projected wgs84 (lat/long)
   projection(covariates) <- wgs84(TRUE)
@@ -2101,6 +2133,7 @@ runABRAID <- function (occurrence_path,
   if (verbose) {
     cat('model fitting done\n\n')
   }
+  
   # get cross-validation statistics in parallel
   stat_lis <- sfLapply(model_list,
                        getStats)
@@ -2125,6 +2158,16 @@ runABRAID <- function (occurrence_path,
   # relative influence statistics
   relinf <- getRelInf(model_list)
   
+  # get order of covariates from numeric covariate names
+  cov_order <- as.numeric(relinf[, 1])
+  
+  # append the file paths and names to the results
+  relinf <- cbind(file_path = covariate_file[cov_order],
+                  covariate = covariate_names[cov_order],
+                  relinf[, -1])
+
+  
+  # output this file
   write.csv(relinf,
             'results/relative_influence.csv',
             na = "",
@@ -2146,11 +2189,20 @@ runABRAID <- function (occurrence_path,
                       return(x)
                     })
   
-  # paste the name of the covarate in as an extra column
+  # paste the name of the covariate and the file path in as extra columns
   for(i in 1:length(effects)) {
+    
+    # get number of evaluation points
     n <- nrow(effects[[i]])
-    name <- names(effects)[i]
-    effects[[i]] <- cbind(covariate = rep(name, n),
+    
+    # get the number of the covariate
+    cov_number <- as.numeric(names(effects)[i])
+    
+    # append file path and name to effect curve
+    effects[[i]] <- cbind(file_path = rep(covariate_file[cov_number],
+                                          n),
+                          covariate = rep(covariate_names[cov_number],
+                                          n),
                           effects[[i]])
   }
   

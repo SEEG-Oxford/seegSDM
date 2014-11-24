@@ -2163,7 +2163,7 @@ runABRAID <- function (occurrence_path,
   cov_order <- as.numeric(relinf[, 1])
   
   # append the file paths and names to the results
-  relinf <- cbind(file_path = covariate_file[cov_order],
+  relinf <- cbind(file_path = covariate_path[cov_order],
                   covariate = covariate_names[cov_order],
                   relinf[, -1])
 
@@ -2200,7 +2200,7 @@ runABRAID <- function (occurrence_path,
     cov_number <- as.numeric(names(effects)[i])
     
     # append file path and name to effect curve
-    effects[[i]] <- cbind(file_path = rep(covariate_file[cov_number],
+    effects[[i]] <- cbind(file_path = rep(covariate_path[cov_number],
                                           n),
                           covariate = rep(covariate_names[cov_number],
                                           n),

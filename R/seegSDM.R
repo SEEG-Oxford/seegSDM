@@ -2160,7 +2160,7 @@ runABRAID <- function (occurrence_path,
   relinf <- getRelInf(model_list)
   
   # get order of covariates from numeric covariate names
-  cov_order <- as.numeric(relinf[, 1])
+  cov_order <- as.numeric(gsub('X', '', rownames(relinf)))
   
   # append the file paths and names to the results
   relinf <- cbind(file_path = covariate_path[cov_order],
@@ -2197,7 +2197,7 @@ runABRAID <- function (occurrence_path,
     n <- nrow(effects[[i]])
     
     # get the number of the covariate
-    cov_number <- as.numeric(names(effects)[i])
+    cov_number <- as.numeric(gsub('X', '', names(effects)[i]))
     
     # append file path and name to effect curve
     effects[[i]] <- cbind(file_path = rep(covariate_path[cov_number],

@@ -2151,6 +2151,11 @@ runABRAID <- function (occurrence_path,
   # cross-validation statistics (with pairwise-weighted distance sampling)
   stats <- do.call("rbind", stat_lis)
   
+  # keep only the relevant statistics
+  stats <- stats[, c('auc', 'sens', 'spec', 'pcc', 'kappa',
+		     'auc_sd', 'sens_sd', 'spec_sd', 'pcc_sd', 'kappa_sd')]
+
+  # write stats to disk
   write.csv(stats,
             'results/statistics.csv',
             na = "",

@@ -1935,6 +1935,7 @@ splitIdx <- function (n, maxn = 1000) {
 
 runABRAID <- function (occurrence_path,
                        extent_path,
+                       admin0_path,
                        admin1_path,
                        admin2_path,
                        covariate_path,
@@ -2047,11 +2048,10 @@ runABRAID <- function (occurrence_path,
   extent <- raster(extent_path)
   
   # load the admin rasters as a stack
-  # Note the horrible hack of specifying admin 0
-  # and admin 3 as the provided admin 1.
+  # Note the horrible hack of specifying admin 3 as the provided admin 1.
   # These should be ignored since ABRAID should never contain anything other
-  # than levels 1 and 2
-  admin <- stack(c(admin1_path,
+  # than levels 0, 1 and 2
+  admin <- stack(c(admin0_path,
                    admin1_path,
                    admin2_path,
                    admin1_path))

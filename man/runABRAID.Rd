@@ -29,6 +29,9 @@ runABRAID(occurrence_path,
   \item{extent_path}{
     A character vector of length one specifying the file path of an  ASCII raster file giving the definitive extents of the disease.
   }
+  \item{admin0_path}{
+    A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level one.
+  }
   \item{admin1_path}{
     A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level one.
   }

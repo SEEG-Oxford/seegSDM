@@ -280,7 +280,7 @@ getStats <-
       stats <- t(sapply(preds, calcStats))
       
       # return the mean of these
-      return (colMeans(stats))
+      return (colMeans(stats, na.rm = TRUE))
       
       # with return statement
       
@@ -339,7 +339,8 @@ getStats <-
           stats <- t(sapply(preds, calcStats))
           
           # return the mean of these
-          return (colMeans(stats))
+          return (colMeans(stats, na.rm = TRUE))
+          
         } # close pwd = FALSE, cv else
       }# close pwd else
   }

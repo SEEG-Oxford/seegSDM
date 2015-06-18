@@ -1,6 +1,6 @@
 # function file for seegSDM package
 
-
+# editing SEEG SDM
 ## TO DOCUMENT
 
 notMissingIdx <- function(raster) {

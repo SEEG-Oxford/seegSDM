@@ -51,7 +51,7 @@ runBRT(data,
     A \code{RasterBrick} or \code{RasterStack} object to predict the model to.
   }
   \item{gbm.coords}{
-    Optional index for two columns containing coordinates of records. This is required if you later want to calculate validation statistics using pair-wise distance sampling (setting \code{pwd = TRUE} in \code{\link{getStats}}). Set to \code{NULL} (the default) if not required.
+    Optional index for two columns (longitude then latitude) containing coordinates of records. This is required if you later want to calculate validation statistics using pair-wise distance sampling (setting \code{pwd = TRUE} in \code{\link{getStats}}). Set to \code{NULL} (the default) if not required.
   }
   \item{wt}{
   An optional vector of regression weights, an index for a column giving regression weights or a function to create the weights from the presence/absence column. The default (\code{wt = NULL}) applies full weight to each record. If a function is specified, it must take a vector of 1s and 0s as input and return a vector of the same length giving regression weights. To apply a 50:50 weighting of presence and absence records (mimicking a  prevalence of 0.5) use: \code{wt = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))}.

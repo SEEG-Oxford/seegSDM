@@ -1,7 +1,10 @@
 # seegSDM
-## Streamlined functions for species distribution modelling in the [seeg research group][1].
+## Streamlined Functions for Species Distribution Modelling in the [SEEG Research Group][1].
 
-This package contains (or at least will contain) a set of streamlined functions to fit species distribution models. The current focus is on the ensemble BRT approaches used in the recent [Bhatt et al. dengue paper][2]
+This package contains a set of streamlined functions to fit species distribution models.
+The current focus is on the ensemble BRT approaches used in the recent [Bhatt et al. dengue paper][2].
+The package is intended to help members of the research group to fit these and similar models, and to let other researchers scrutinise the methodology in detail.
+This package is *not* intended to be used more widely - of course you're welcome to use it and we hope it's helpful, but maintaining it and making it user friendly is not a major focus.
 
 
 ### Installing and loading the package
@@ -13,14 +16,6 @@ To install the package from gihub you first need to install and load Hadley Wick
 install.packages('devtools')
 library(devtools)
 ```
-
-```seegSDM``` currently depends on version 2.1-0.4 or later of the ```gbm``` R package.
-This version isn't on CRAN yet, so you'll need to install it from github first.
-
-```r
-install_github('pdmetcalfe/gbm')
-```
-
 Now we can use ```install_github``` to install ```seegSDM```
 
 ```r

@@ -2263,3 +2263,20 @@ runABRAID <- function (occurrence_path,
   # return an exit code of 0, as in the ABRAID-MP code
   return (0)
 }
+
+#### function for generating a master mask from stack of rasters
+
+masterMask <- function (rasters) {
+  # given a stack of rasters
+  # loop through rasters masking one layer by every other layer to create a master mask
+  # returns master mask
+  
+  master <- rasters[[1]]
+  
+  for (i in 1:nlayers(rasters)){
+    master <- mask(master, covs[[i]])
+  }
+  
+  return(master)
+  
+} 

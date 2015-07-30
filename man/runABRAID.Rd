@@ -12,6 +12,7 @@ This function is intended for use in the ABRAID mapping platform, rather than fo
 \usage{
 runABRAID(occurrence_path,
           extent_path,
+          admin0_path,
           admin1_path,
           admin2_path,
           covariate_path,

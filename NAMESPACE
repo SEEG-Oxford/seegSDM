@@ -34,13 +34,15 @@ export(subsample)
 export(tempStand)
 export(wgs84)
 
-# imports
-import(raster)
+# dependencies
 import(sp)
+import(raster)
+import(rgeos)
+
+# imports
 import(dismo)
 import(gbm)
 import(gtools)
-import(rgeos)
 import(snowfall)
 import(PresenceAbsence)
 import(rgdal)

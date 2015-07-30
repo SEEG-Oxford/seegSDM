@@ -1,2 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.git$
+^readme\.md$
+^\.gitignore$
+^figure$
+^fake_data$

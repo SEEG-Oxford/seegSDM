@@ -2274,7 +2274,7 @@ masterMask <- function (rasters) {
   master <- rasters[[1]]
   
   for (i in 1:nlayers(rasters)){
-    master <- mask(master, covs[[i]])
+    master <- mask(master, rasters[[i]])
   }
   
   return(master)

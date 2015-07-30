@@ -29,7 +29,7 @@ Functions are provided to assist with the seeg SDM workflow:
 Nick Golding, with some functions based on code by Samir Bhatt
 }
 \references{
-Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{http://dx.doi.org/10.1038/nature12060}
+Bhatt et al. (2013)  The global distribution and burden of dengue. Nature \url{http://www.nature.com/nature/journal/v496/n7446/full/nature12060.html}
 }
 
 \seealso{

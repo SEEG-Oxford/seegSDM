@@ -2248,3 +2248,35 @@ masterMask <- function (rasters) {
   return(master)
   
 } 
+
+### function which calculates the number of points falling within each pixel in a raster
+
+rasterPointCount <- function (rasterbrick, coords){
+  
+  # given a rasterbrick and a two-column matrix of coordinates 'coords' (in the order: x, y)
+  # counts the number of points falling within each pixel in the rasterbrick
+  # returns a two-column dataframe containing the pixel ID number and the count of points for that pixel 
+  
+  # get raster cell ID for each set of coordinates 
+  cells <- cellFromXY(rasterbrick, coords)
+  
+  # create a dataframe with columns for cell ID and number of points for each cell 
+  cell_ID <- c(1:ncell(rasterbrick))
+  df <- data.frame(cell_ID)
+  
+  # set count to 0 for all cells
+  df$points <- 0
+  
+  # get the different cells containing points
+  u <- unique(cells)
+  
+  # loop through, getting a count for each cell_ID and adding this to the output dataframe 
+  for (ID in u){
+    cell_idx <- which(cells==ID)
+    count <- length(cell_idx)
+    df[cell_ID==ID, 'points'] <- count
+  }
+  
+  return(df)
+  
+}

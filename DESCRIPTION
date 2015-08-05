@@ -1,11 +1,10 @@
 Package: seegSDM
 Type: Package
-Title: Streamlined functions for species distribution modelling in the seeg research group.
-Version: 0.1-5
-Date: 2015-02-26
-Author: Nick Golding
-Maintainer: Nick Golding <nick.golding@zoo.ox.ac.uk>
+Title: Streamlined Functions for Species Distribution Modelling in the SEEG Research Group
+Version: 0.1-6
+Author: Nick Golding & Freya Shearer
+Maintainer: Nick Golding <nick.golding.research@gmail.com>
 Description: The present focus is on ensemble boosted regression tree methods such as those used in Bhatt et al. (2013). This will be developed to incorporate other statistical models, methods for selection of pseudo-absence data and other modelling choices.
 License: GPL(>2)
-Depends: dismo, gbm, sp, raster, gtools, rgeos, snowfall, rgdal, PresenceAbsence
-LinkingTo: dismo, gbm, sp, raster, gtools, rgeos, snowfall, rgdal, PresenceAbsence
+Depends: sp, raster, rgeos
+Imports: dismo, gbm, gtools, snowfall, PresenceAbsence, rgdal, parallel

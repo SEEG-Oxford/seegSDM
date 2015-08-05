@@ -1,2 +1,13 @@
+# RStudio bits
 ^.*\.Rproj$
 ^\.Rproj\.user$
+
+# git/github bits
+^\.git$
+^\.gitignore$
+^readme\.md$
+
+# tutorial bits
+^figure$
+^fake_data$
+^seegSDM_tutorial.*$

@@ -26,6 +26,7 @@ export(occurrence2SPDF)
 export(os2en)
 export(osgb36)
 export(percCover)
+export(rasterPointCount)
 export(rmse)
 export(runABRAID)
 export(runBRT)
@@ -34,6 +35,7 @@ export(splitIdx)
 export(subsample)
 export(tempStand)
 export(wgs84)
+
 
 # dependencies
 import(sp)

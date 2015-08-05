@@ -17,9 +17,9 @@ The raster from which to calculate the number of points within each pixel.
   \item{coords}{
 A two-column matrix of coordinates in the order x then y.
 }
-
+}
 \value{
-A two-column dataframe with each row containing the pixel ID number and the count of points for that pixel. 
+A two-column dataframe with each row containing the pixel ID number and the count of points for that pixel. }
 \seealso{
 \code{\link{cellFromXY}}
 }

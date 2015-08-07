@@ -2254,14 +2254,15 @@ masterMask <- function (rasters) {
 rasterPointCount <- function (rasterbrick, coords, absence = NULL, extract=FALSE){
   
   # given a rasterbrick and a two-column matrix of coordinates 'coords' (in the order: x, y)
-  # counts the number of occurrence points falling within each pixel in the rasterbrick
+  # counts the number of points falling within each pixel in the rasterbrick
   # if absence = NULL: returns a three-column dataframe containing x and y coordinates for each pixel 
   # and the frequency of occurrence points for that pixel. The frequency for pixels containing no points is 0 
   # if absence != NULL: returns a three-column dataframe containing x and y coordinates for each pixel
   # and the frequency of occurrence points for that pixel, or 0 if the pixel contains a psuedo-absence point. 
-  # The freqency value for pixels containing no points is NA.
-  # If any coordinates for occurrence and pseudo-absence points fall within the same pixel, the function returns an error.
-  # If extract=TRUE, raster values for each pixel are extracted and also returned in the dataframe.
+  # Pixels containing no points are removed.
+  # If any coordinates for occurrence and pseudo-absence points fall within the same pixel,
+  # they are removed from the pseudo-absence dataset and a warning is issued.
+  # If extract=TRUE, raster values for each pixel are extracted and returned in the dataframe
   
   # ~~~~~~~~~
   # make dataframe of cells containing at least one occurrence point
@@ -2285,37 +2286,20 @@ rasterPointCount <- function (rasterbrick, coords, absence = NULL, extract=FALSE
     # change column names to match occ
     names(absences)[names(absences)=='unique.cell_0.']<-'cell'
     
-    # combine with occurrence data
-    occ_absences <- rbind(absences, occ)
+    # check if any occurrence and pseudo-absence points fall within the same pixel
+    idx_overlap <- which(absences$cell %in% occ$cell)
     
-    if (any(occ$cell %in% absences$cell)) {
-      stop('Some occurrence and pseudo-absence points fall within the same pixel')
+    # if so, remove points from pseudo-absence dataset and issue a warning
+    if (length(idx_overlap) > 0) {
+      absences <- absences[-idx_overlap,]
+      warning (length(idx_overlap), " pseudo-absence points were removed as they fell within the same pixels as occurrence points")
     }
     
-    stopifnot(!(any(occ$cell %in% absences$cell)))
-    
-    # ~~~~~~~~~ 
-    # make a dataframe of cells containing no points
-    # make a vector of all raster cell IDs
-    cell_NA <- c(1:ncell(rasterbrick))
-    # get index of cell_IDs containing at least one occurrence pt or a pseudo-absence pt
-    idx <- which(cell_NA[] %in% (occ_absences$cell))
-    # remove these from cell ID vector 
-    cell_NA <- cell_NA[-idx]
-    # convert cell ID vector to a dataframe 
-    no_points <- data.frame(cell_NA)
-    # set count to NA for all cell IDs
-    no_points$Freq <- NA
-    # change column names to match occ
-    names(no_points)[names(no_points)=='cell_NA']<-'cell'
-    
-    # ~~~~~~~~
-    # combine data 
-    dat_all <- rbind(no_points, occ_absences) 
+    # combine with occurrence data
+    dat_all <- rbind(absences, occ)
     
   } else {
     
-    # ~~~~~~~~~ 
     # make a dataframe of cells containing no points
     # make a vector of all raster cell IDs
     cell_NA <- c(1:ncell(rasterbrick))
@@ -2327,7 +2311,7 @@ rasterPointCount <- function (rasterbrick, coords, absence = NULL, extract=FALSE
     no_points <- data.frame(cell_NA)
     # set count to 0 for all cell IDs if presence only data
     no_points$Freq <- 0
-    # change column names to match df_counts
+    # change column names to match occ
     names(no_points)[names(no_points)=='cell_NA']<-'cell'
     
     # ~~~~~~~~

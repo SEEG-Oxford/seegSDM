@@ -2251,32 +2251,94 @@ masterMask <- function (rasters) {
 
 ### function which calculates the number of points falling within each pixel in a raster
 
-rasterPointCount <- function (rasterbrick, coords){
+rasterPointCount <- function (rasterbrick, coords, absence = NULL, extract=FALSE){
   
   # given a rasterbrick and a two-column matrix of coordinates 'coords' (in the order: x, y)
   # counts the number of points falling within each pixel in the rasterbrick
-  # returns a two-column dataframe containing the pixel ID number and the count of points for that pixel 
+  # if absence = NULL: returns a three-column dataframe containing x and y coordinates for each pixel 
+  # and the frequency of occurrence points for that pixel. The frequency for pixels containing no points is 0 
+  # if absence != NULL: returns a three-column dataframe containing x and y coordinates for each pixel
+  # and the frequency of occurrence points for that pixel, or 0 if the pixel contains a psuedo-absence point. 
+  # Pixels containing no points are removed.
+  # If any coordinates for occurrence and pseudo-absence points fall within the same pixel,
+  # they are removed from the pseudo-absence dataset and a warning is issued.
+  # If extract=TRUE, raster values for each pixel are extracted and returned in the dataframe
   
+  # ~~~~~~~~~
+  # make dataframe of cells containing at least one occurrence point
   # get raster cell ID for each set of coordinates 
-  cells <- cellFromXY(rasterbrick, coords)
+  cell <- cellFromXY(rasterbrick, coords)
+  # make table of counts for each cell ID
+  tab <- table(cell)
+  # convert table to a dataframe
+  occ <- data.frame(tab)
   
-  # create a dataframe with columns for cell ID and number of points for each cell 
-  cell_ID <- c(1:ncell(rasterbrick))
-  df <- data.frame(cell_ID)
-  
-  # set count to 0 for all cells
-  df$points <- 0
-  
-  # get the different cells containing points
-  u <- unique(cells)
-  
-  # loop through, getting a count for each cell_ID and adding this to the output dataframe 
-  for (ID in u){
-    cell_idx <- which(cells==ID)
-    count <- length(cell_idx)
-    df[cell_ID==ID, 'points'] <- count
+  # ~~~~~~~~~
+  # make dataframe of cells containing pseudo-absence points
+  if (!(is.null(absence))) {
+    
+    # get raster cell ID for each set of coordinates
+    cell_0 <- cellFromXY(rasterbrick, absence)
+    # convert vector to a dataframe of unique cell IDs
+    absences <- data.frame(unique(cell_0))
+    # set count to 0 for all cell IDs
+    absences$Freq <- 0
+    # change column names to match occ
+    names(absences)[names(absences)=='unique.cell_0.']<-'cell'
+    
+    # check if any occurrence and pseudo-absence points fall within the same pixel
+    idx_overlap <- which(absences$cell %in% occ$cell)
+    
+    # if so, remove points from pseudo-absence dataset and issue a warning
+    if (length(idx_overlap) > 0) {
+      absences <- absences[-idx_overlap,]
+      warning (length(idx_overlap), " pseudo-absence points were removed as they fell within the same pixels as occurrence points")
+    }
+    
+    # combine with occurrence data
+    dat_all <- rbind(absences, occ)
+    
+  } else {
+    
+    # make a dataframe of cells containing no points
+    # make a vector of all raster cell IDs
+    cell_NA <- c(1:ncell(rasterbrick))
+    # get index of cell_IDs containing at least one point
+    idx <- which(cell_NA[] %in% occ$cell)
+    # remove these from cell ID vector 
+    cell_NA <- cell_NA[-idx]
+    # convert cell ID vector to a dataframe 
+    no_points <- data.frame(cell_NA)
+    # set count to 0 for all cell IDs if presence only data
+    no_points$Freq <- 0
+    # change column names to match occ
+    names(no_points)[names(no_points)=='cell_NA']<-'cell'
+    
+    # ~~~~~~~~
+    # combine data 
+    dat_all <- rbind(no_points, occ) 
+    
   }
   
-  return(df)
+  # get coords of each cell
+  cell_coords <- xyFromCell(rasterbrick, as.numeric(dat_all$cell))
+  
+  # combine with other info
+  dat_all <- cbind(dat_all, cell_coords)
+  
+  if (extract) {
+    
+    # get raster values
+    raster_values <- extract(rasterbrick, cell_coords)
+    
+    # combined with other info
+    dat_all <- cbind(dat_all, raster_values)
+    
+  }
+  
+  # remove cell_ID column
+  dat_all$cell <- NULL
+  
+  return(dat_all)
   
 }

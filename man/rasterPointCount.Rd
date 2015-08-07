@@ -64,13 +64,16 @@ absence <- matrix(c(-6, 2,
 # get count of points for each raster pixel for occurrence data only
 count_data_occ <- rasterPointCount (covariates, occ) 
 
-# get count of point for each raster pixel for occurrence and pseudo-absence points
+# get count of point for each raster pixel for occurrence and pseudo-absence
+# points
 count_data <- rasterPointCount(covariates, occ, absence)
 
-# get count of point for each raster pixel for occurrence data and extract raster values
+# get count of point for each raster pixel for occurrence data and extract
+# raster values
 count_data_occ_covs <- rasterPointCount (covariates, occ, extract=TRUE) 
 
-# get count of point for each raster pixel for occurrence and pseudo-absence data and extract raster values
+# get count of point for each raster pixel for occurrence and pseudo-absence
+# data and extract raster values
 count_data_covs <- rasterPointCount (covariates, occ, absence, extract=TRUE) 
 
 }

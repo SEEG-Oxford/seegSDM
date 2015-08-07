@@ -27,6 +27,9 @@ A two-column matrix of coordinates in the order x then y. Occurrence points.
  \item{absence}{
 A two-column matrix of coordinates in the order x then y. Pseudo-absence points.
 }
+ \item{extract}{
+Whether to extract and return raster values.
+}
 }
 \value{
 A three-column dataframe containing x and y coordinates for each pixel and the count of occurrence points for that pixel. Pixels containing no points are assigned the value 0. 

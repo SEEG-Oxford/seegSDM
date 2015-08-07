@@ -41,32 +41,37 @@ If pseudo-absence points are included, the function returns a three-column dataf
 }
 \examples{
 # load a test raster
-r <- raster(system.file("external/test.grd", package="raster"))
+data(covariates)
 
 # make some occurrence points
-occ <- matrix(c(179000, 330000,
-                181000, 333000,
-                180000, 332000,
-                180000, 332000,
-                180000, 332000),
+occ <- matrix(c(-5, 0,
+                0, -5,
+                -5, 5,
+                -5, 5,
+                -5, 10),
                 ncol = 2,
                 byrow = TRUE)
 
 # make some pseudo-absence points
-absence <- matrix(c(179000, 331000,
-                    179000, 330500,
-                    180000, 331000,
-                    180000, 332000,
-                    181000, 333000),
+absence <- matrix(c(-6, 2,
+                    -7, 5,
+                    5, -4,
+                    -5, 5,
+                    -5, 10),
                     ncol = 2,
                     byrow = TRUE)
 
 # get count of points for each raster pixel for occurrence data only
-count_data_occ <- rasterPointCount (r, occ) 
+count_data_occ <- rasterPointCount (covariates, occ) 
 
 # get count of point for each raster pixel for occurrence and pseudo-absence points
-count_data <- rasterPointCount(r, occ, absence)
+count_data <- rasterPointCount(covariates, occ, absence)
 
+# get count of point for each raster pixel for occurrence data and extract raster values
+count_data_occ_covs <- rasterPointCount (covariates, occ, extract=TRUE) 
+
+# get count of point for each raster pixel for occurrence and pseudo-absence data and extract raster values
+count_data_covs <- rasterPointCount (covariates, occ, absence, extract=TRUE) 
 
 }
 

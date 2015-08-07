@@ -51,7 +51,9 @@ occ <- matrix(c(179000, 330000,
 # make some pseudo-absence points
 absence <- matrix(c(179000, 331000,
                     179000, 330500,
-                    180000, 331000))
+                    180000, 331000),
+                    ncol = 2,
+                    byrow = TRUE)
 
 # get count of points for each raster pixel
 count_data <- rasterPointCount (r, occ, absence)

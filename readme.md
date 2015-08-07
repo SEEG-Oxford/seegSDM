@@ -38,7 +38,7 @@ You can report bugs, issues and suggestions for extra functions using the issues
 There is the beginnings of a tutorial/example workflow for the package [here](https://rawgithub.com/SEEG-Oxford/seegSDM/master/seegSDM_tutorial.html)
 
 
-[1]: http://simonhay.zoo.ox.ac.uk/staff.php
+[1]: http://seeg.zoo.ox.ac.uk/ 
 [2]: http://dx.doi.org/10.1038/nature12060
 [3]: http://cran.r-project.org/web/packages/devtools/index.html
 

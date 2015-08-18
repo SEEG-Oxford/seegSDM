@@ -1335,8 +1335,10 @@ subsample <- function (data,
     # take a subsample
     sub <- data[sample(1:nrow(data), n, replace = replace), ]
     # count presences and absences
-    npres <- sum(sub[, prescol >= 1]) 
-    nabs <- sum(1 - sub[, prescol >= 1])
+    #npres <- sum(sub[, prescol]) 
+    #nabs <- sum(1 - sub[, prescol])
+    npres <- nrow(sub[sub[, prescol] >= 1,])
+    nabs <- nrow(sub[sub[, prescol] == 0,])
     # if they are greater than or equal to the minimum, criteria are met
     if (npres >= minimum[1] & nabs >= minimum[2]) {
       OK <- TRUE

@@ -19,7 +19,7 @@ At present, only \code{method = 'step'} returns a model from which full validati
 runBRT(data,
        gbm.x,
        gbm.y,
-       pred.raster,
+       pred.raster = NULL,
        gbm.coords = NULL,
        wt = NULL,
        max_tries = 5,
@@ -48,7 +48,7 @@ runBRT(data,
     Index for column containing presence/absence code (1s or 0s).
   }
   \item{pred.raster}{
-    A \code{RasterBrick} or \code{RasterStack} object to predict the model to.
+    An optional \code{RasterBrick} or \code{RasterStack} object to predict the model to. 
   }
   \item{gbm.coords}{
     Optional index for two columns (longitude then latitude) containing coordinates of records. This is required if you later want to calculate validation statistics using pair-wise distance sampling (setting \code{pwd = TRUE} in \code{\link{getStats}}). Set to \code{NULL} (the default) if not required.
@@ -102,7 +102,7 @@ A list containing four elements
   \item{model }{the fitted gbm model}
   \item{effects }{a list of effect curves with one element ofr each covariate}
   \item{relinf }{a vector of relative influence estimates for each covariate}
-  \item{pred }{a \code{RasterLayer} giving predictions on the probability scale.}
+  \item{pred }{a \code{RasterLayer} giving predictions on the probability scale (or \code{NULL} if \code{pred.raster = NULL})}
   \item{coords }{a dataframe giving the coordinates of the training points (or \code{NULL} if \code{gbm.coords = NULL})}
 }
 

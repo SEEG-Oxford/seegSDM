@@ -878,7 +878,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 runBRT <- function (data,
                     gbm.x,
                     gbm.y,
-                    pred.raster,
+                    pred.raster = NULL,
                     gbm.coords = NULL,
                     wt = NULL,
                     max_tries = 5,
@@ -1058,10 +1058,14 @@ runBRT <- function (data,
                     plotit = FALSE)
   
   # get prediction raster
-  pred = predict(pred.raster,
-                 m,
-                 type = 'response',
-                 n.trees = m$n.trees)
+  if (!(is.null(pred.raster))){
+    pred = predict(pred.raster,
+                   m,
+                   type = 'response',
+                   n.trees = m$n.trees)
+  } else{
+    pred <- NULL
+  }
   
   # get coordinates
   if (is.null(gbm.coords)) {

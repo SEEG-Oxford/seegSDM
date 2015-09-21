@@ -21,7 +21,6 @@ makePreds(object,
   }
 }
 
-}
 \value{
 A raster containing prediction values.
 }

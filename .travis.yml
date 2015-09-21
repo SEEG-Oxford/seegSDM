@@ -10,6 +10,7 @@ before_install:
   - ./pkg-build.sh bootstrap
 
 install:
+  - sudo apt-get install libgdal1-dev libproj-dev
   - ./pkg-build.sh install_deps
 
 script:

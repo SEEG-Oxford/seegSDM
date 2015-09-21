@@ -2348,3 +2348,32 @@ rasterPointCount <- function (rasterbrick, coords, absence = NULL, extract=FALSE
   return(dat_all)
   
 }
+
+### function for predicting to rasters using a fitted model from runBRT 
+
+makePreds <- function (object, pred_covs) {
+  
+  # given the output from runBRT and a rasterbrick of covariates to predict to
+  # the function makes (and returns) a prediction to the rasters based on the model from runBRT
+  # note that column names for covariates used in runBRT must match prediction covariate names
+  
+  model_var_names <- object$model$var.names
+  
+  if (!(all(model_var_names %in% names(pred_covs)))){
+    stop('covariate column names must match prediction covariate names')
+  }
+  
+  # get model and n.trees from runBRT output
+  model <- object$model
+  n.trees <- object$model$n.trees
+  
+  # make prediction
+  pred <- predict(pred_covs,
+                  model,
+                  type = 'response',
+                  n.trees = n.trees)
+  return(pred)        
+  
+}
+
+

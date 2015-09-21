@@ -11,3 +11,7 @@
 ^figure$
 ^fake_data$
 ^seegSDM_tutorial.*$
+
+# travis yaml
+.travis.yml
+

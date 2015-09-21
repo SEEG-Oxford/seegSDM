@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/SEEG-Oxford/seegSDM.svg)](https://travis-ci.org/SEEG-Oxford/seegSDM)
+
 # seegSDM
 ## Streamlined Functions for Species Distribution Modelling in the [SEEG Research Group][1].
 

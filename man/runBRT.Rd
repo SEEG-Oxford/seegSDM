@@ -110,5 +110,37 @@ A list containing four elements
 \code{\link{gbm.step}}, \code{\link{getRelInf}}, \code{\link{getEffectPlots}}, \code{\link{combinePreds}}
 }
 \examples{
-# TO DO
+# load the data
+data(occurrence)
+
+# load the covariate rasters
+data(covariates)
+
+# load evidence consensus layer
+data(consensus)
+
+background <- bgSample(consensus,
+                       n= 100,
+                       replace=FALSE,
+                       spatial=FALSE)
+
+colnames(background) <- c('Longitude', 'Latitude')
+background <- data.frame(background)
+
+# combine the occurrence and background records
+dat <- rbind(cbind(PA = rep(1, nrow(occurrence)),
+                   occurrence[, c('Longitude', 'Latitude')]),
+             cbind(PA = rep(0, nrow(background)),
+                   background[ ,c('Longitude', 'Latitude')]))
+
+# extract covariate values for each data point
+dat_covs <- extract(covariates, dat[, c('Longitude', 'Latitude')])
+
+# combine covariates with the other info
+dat_all <- cbind(dat, dat_covs)
+
+model <- runBRT(dat_all,
+                gbm.x = 4:6,
+                gbm.y = 1,
+                n.folds = 5)
 }

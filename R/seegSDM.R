@@ -1376,7 +1376,13 @@ bgSample <- function(raster,
   } else {
     prob <- NULL
   }
-  points <- sample(x = pixels, size = n, replace = replace, prob = prob)
+  
+  # sample errors if prob is of length one, so handle this here
+  if (length(prob == 1)) {
+    points <- sample(x = pixels, size = n, replace = replace)
+  } else {
+    points <- sample(x = pixels, size = n, replace = replace, prob = prob)
+  }
   points <- xyFromCell(raster, points)
   if (spatial) {
     return (SpatialPoints(points, proj4string = raster@crs))

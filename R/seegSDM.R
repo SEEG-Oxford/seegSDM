@@ -1370,19 +1370,23 @@ bgSample <- function(raster,
   # is assumed to be a bias grid and points sampled accordingly. If 'sp = TRUE'
   # a SpatialPoints* object is returned, else a matrix of coordinates
 {
-  pixels <- notMissingIdx(raster)  # which(!is.na(getValues(raster)))
+  pixels <- notMissingIdx(raster)
+  
   if (prob) {
     prob <- getValues(raster)[pixels]
   } else {
     prob <- NULL
   }
   
-  # sample errors if prob is of length one, so handle this here
-  if (length(prob == 1)) {
-    points <- sample(x = pixels, size = n, replace = replace)
-  } else {
-    points <- sample(x = pixels, size = n, replace = replace, prob = prob)
-  }
+  # sample does stupid things if x is an integer, so sample an index to the
+  # pixel numbers instead
+  idx <- sample.int(n = length(pixels),
+                    size = n,
+                    replace = replace,
+                    prob = prob)
+  points <- pixels[idx]
+  
+  # get as coordinates
   points <- xyFromCell(raster, points)
   if (spatial) {
     return (SpatialPoints(points, proj4string = raster@crs))

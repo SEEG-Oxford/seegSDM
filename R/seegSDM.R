@@ -1940,8 +1940,11 @@ splitIdx <- function (n, maxn = 1000) {
   lapply(1:bins, function(i) c(start[i], end[i]))
 }
 
-runABRAID <- function (occurrence_path,
+runABRAID <- function (mode, 
+                       disease,
+                       occurrence_path,
                        extent_path,
+                       supplementary_occurrence_path,
                        admin0_path,
                        admin1_path,
                        admin2_path,
@@ -1954,18 +1957,24 @@ runABRAID <- function (occurrence_path,
                        parallel_flag = TRUE) {
   
   # Given the locations of: a csv file containing disease occurrence data
-  # (`occurrence_path`, a character), an ASCII raster giving the definitive
-  # extents of the disease (`extent_path`, a character), and ASCII rasters
-  # giving standardised admin units (`admin_path`; these *must* be in
-  # ascending order) and the ASCII rasters giving the covariates to use
-  # (`covariate_path`, a character vector). Run a predictive model to produce
+  # (`occurrence_path`, a character), a GeoTIFF raster giving the definitive
+  # extents of the disease (`extent_path`, a character), a csv file containing 
+  # disease occurrence data for other diseases (`supplementary_occurrence_path`,
+  # a character), GeoTIFF rasters giving standardised admin units (`admin0_path`,
+  # `admin1_path`, `admin2_path`) and GeoTIFF rasters giving the covariates to
+  # use (`covariate_path`,  a character vector). Run a predictive model to produce
   # a risk map (and associated outputs) for the disease.
   # The file given by `occurrence_path` must contain the columns 'Longitude',
   # 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree
   # of weighting to assign to each occurrence record), 'Admin' (giving the
-  # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points)
-  # and 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
-  # NA for points).
+  # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points),
+  # 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
+  # NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
+  # The file given by `supplementary_occurrence_path` must contain the columns 
+  # 'Longitude', 'Latitude' (giving the coordinates of points), 'Admin' (giving the
+  # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points),
+  # 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
+  # NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
   # To treat any covariates as discrete variables, provide a logical vector
   # `discrete` with `TRUE` if the covariate is a discrete variable and `FALSE`
   # otherwise. By default, all covariates are assumed to be continuous.
@@ -1982,12 +1991,21 @@ runABRAID <- function (occurrence_path,
   
   # ~~~~~~~~
   # check inputs are of the correct type and files exist
+  modes <- readLines(system.file('data/abraid_modes.txt', package='seegSDM'))
+  stopifnot(class(mode) == 'character' &&
+              is.element(mode, modes))
+
+  stopifnot(is.numeric(disease))
+
   stopifnot(class(occurrence_path) == 'character' &&
               file.exists(occurrence_path))
   
   stopifnot(class(extent_path) == 'character' &&
               file.exists(extent_path))
-  
+    
+  stopifnot(class(supplementary_occurrence_path) == 'character' &&
+              file.exists(supplementary_occurrence_path))
+
   stopifnot(file.exists(admin1_path))
   
   stopifnot(file.exists(admin2_path))
@@ -2016,8 +2034,20 @@ runABRAID <- function (occurrence_path,
                                             'GAUL',
                                             'Latitude',
                                             'Longitude',
-                                            'Weight'))
+                                            'Weight',
+                                            'Disease'))
+
+  # occurrence data
+  supplementary_occurrence <- read.csv(supplementary_occurrence_path,
+                         stringsAsFactors = FALSE)
   
+  # check column names are as expected
+  stopifnot(sort(colnames(supplementary_occurrence)) == c('Admin',
+                                                          'GAUL',
+                                                          'Latitude',
+                                                          'Longitude',
+                                                          'Disease'))
+                
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
   occurrence <- occurrence2SPDF(occurrence)

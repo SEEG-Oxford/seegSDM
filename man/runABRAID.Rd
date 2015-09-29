@@ -10,8 +10,11 @@ This function is intended for use in the ABRAID mapping platform, rather than fo
 }
 
 \usage{
-runABRAID(occurrence_path,
+runABRAID(mode, 
+          disease,
+          occurrence_path,
           extent_path,
+          supplementary_occurrence_path,
           admin0_path,
           admin1_path,
           admin2_path,
@@ -24,23 +27,32 @@ runABRAID(occurrence_path,
 }
 
 \arguments{
+  \item{mode}{
+    A character vector of length one specifying type of model to be performed. E.g. 'bhatt' to use the BRT ensemble approach from the Bhatt \emph{et al.} (2013) dengue mapping paper. Supported modes can be found in 'data/abraid_modes.txt'.
+  }
+  \item{disease}{
+    A numeric identifer for the disease being modelled.
+  }
   \item{occurrence_path}{
-    A character vector of length one specifying the file path of a csv file containing occurrence data. This file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree of weighting to assign to each occurrence record), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points) and 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points).
+    A character vector of length one specifying the file path of a csv file containing occurrence data. This file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Weight' (giving the degree of weighting to assign to each occurrence record), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points), 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
   }
   \item{extent_path}{
-    A character vector of length one specifying the file path of an  ASCII raster file giving the definitive extents of the disease.
+    A character vector of length one specifying the file path of a GeoTiff raster file giving the definitive extents of the disease.
+  }
+  \item{supplementary_occurrence_path}{
+    A character vector of length one specifying the file path of a csv file containing occurrence data for other diseases. This file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points), 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
   }
   \item{admin0_path}{
-    A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level one.
+    A character vector of length one specifying the file path of a GeoTiff raster file giving the GAUL codes for administrative regions at level one.
   }
   \item{admin1_path}{
-    A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level one.
+    A character vector of length one specifying the file path of a GeoTiff raster file giving the GAUL codes for administrative regions at level one.
   }
   \item{admin2_path}{
-    A character vector of length one specifying the file path of an  ASCII raster file giving the GAUL codes for administrative regions at level two.
+    A character vector of length one specifying the file path of a GeoTiff raster file giving the GAUL codes for administrative regions at level two.
   }
   \item{covariate_path}{
-    A character vector specifying the file paths of ASCII raster files giving the environmetnal covariates used to predict risk of the disease.
+    A character vector specifying the file paths of GeoTiff raster files giving the environmetnal covariates used to predict risk of the disease.
   }
   \item{discrete}{
     A logical vector of the same length as \code{covariate_path} stating whether each covariate should be considered as continuous (\code{FALSE}) or discrete (\code{TRUE}).

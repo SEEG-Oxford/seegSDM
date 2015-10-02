@@ -42,12 +42,12 @@ export(wgs84)
 import(sp)
 import(raster)
 import(rgeos)
+import(snowfall)
 
 # imports
 import(dismo)
 import(gbm)
 import(gtools)
-import(snowfall)
 import(PresenceAbsence)
 import(rgdal)
 import(parallel)

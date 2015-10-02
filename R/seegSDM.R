@@ -2040,23 +2040,23 @@ runABRAID <- function (mode,
                          stringsAsFactors = FALSE)
   
   # check column names are as expected
-  stopifnot(sort(colnames(occurrence)) == c('Admin',
+  stopifnot(sort(colnames(occurrence)) == sort(c('Admin',
+                                            'Disease',
                                             'GAUL',
                                             'Latitude',
                                             'Longitude',
-                                            'Weight',
-                                            'Disease'))
+                                            'Weight')))
 
   # occurrence data
   supplementary_occurrence <- read.csv(supplementary_occurrence_path,
                          stringsAsFactors = FALSE)
   
   # check column names are as expected
-  stopifnot(sort(colnames(supplementary_occurrence)) == c('Admin',
+  stopifnot(sort(colnames(supplementary_occurrence)) == sort(c('Admin',
+                                                          'Disease',
                                                           'GAUL',
                                                           'Latitude',
-                                                          'Longitude',
-                                                          'Disease'))
+                                                          'Longitude')))
                 
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'

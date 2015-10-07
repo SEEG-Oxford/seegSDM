@@ -11,7 +11,7 @@ This package is *not* intended to be used more widely - of course you're welcome
 
 ### Installing and loading the package
 
-To install the package from gihub you first need to install and load Hadley Wickham's [devtools package][3], like this:
+To install the package from GitHub you first need to install and load Hadley Wickham's [devtools package][3], like this:
 
 
 ```r

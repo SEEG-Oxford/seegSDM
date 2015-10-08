@@ -43,12 +43,17 @@ export(wgs84)
 import(sp)
 import(raster)
 import(rgeos)
+import(snowfall)
 
 # imports
 import(dismo)
 import(gbm)
 import(gtools)
-import(snowfall)
 import(PresenceAbsence)
 import(rgdal)
 import(parallel)
+
+# importFrom for default packages to satisfy R CMD check --as-cran on R-devel
+importFrom("graphics", "polygon", "segments")
+importFrom("stats", "dbinom", "median", "na.omit", "var")
+importFrom("utils", "read.csv", "write.csv")

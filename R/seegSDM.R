@@ -2416,4 +2416,169 @@ makePreds <- function (object, pred_covs) {
   
 }
 
+getConditionalEffectPlots <- function(models,
+                                      plot = FALSE,
+                                      quantiles = c(0.025, 0.975),
+                                      hold = NULL,
+                                      value = NULL,
+                                      ...) {
+  
+  # given a list of BRT model bootstraps (each an output from runBRT)
+  # get the mean and quantiles (95% by default) conditional effect curves 
+  # and return a list giving a matrix for each covariate and optionally plot the results.
+  # option to specify a covariate value for which conditional effect curves are generated  
+  # the dots argument allows some customisation of the plotting outputs
+  
+  getLevels <- function (cov, models) {
+    # get all the possible levels of covariate 'cov'
+    # from the BRT ensemble 'models'
+    if (models[[1]]$model$var.type[cov] != 0) {
+      # if gbm thinks it's a factor, calculate all possible levels
+      levels <- lapply(models, function (m) m$effects[[cov]][, 1])
+      levels <- unique(unlist(levels))
+      return (levels)
+    } else {
+      # if it isn't a factor return NULL
+      return (NULL)
+    }
+  }
+  
+  getConditionalPredictions <- function(models, df_preds) {
+    
+    # get number of trees and model
+    n.trees <- models$model$n.trees
+    m <- models$model
+    
+    # make predictions
+    p_tmp <- predict(m, df_preds, n.trees = n.trees)  
+    
+    return(p_tmp)
+    
+  }
+  
+  getConditionalEffect <- function (cov, models, hold = NULL, value = NULL){
+    
+    # get covariate values
+    x <- sapply(models[[1]]$effects, '[[', 1)
+    
+    # get the mean of all covariate values
+    cov_means <- vector()
+    
+    # loop through x getting the mean of each covariate
+    for (i in 1:length(x)) {
+      mean <- mean(as.numeric(x[[i]]))
+      cov_means <- append(cov_means, mean)
+    }
+    
+    # get levels
+    levels <- getLevels(cov, models)
+    
+    if (is.null(levels)) {
+      
+      # make prediction dataframe 
+      matrix_means <- do.call(rbind, replicate(100, cov_means, simplify = FALSE))
+      df_means <- data.frame(matrix_means)
+      
+      # use range of x values for this covariate
+      df_pred <- df_means
+      x_values <- x[[cov]]
+      df_pred[,cov] <- x_values
+      
+    } else {
+      
+      # make prediction dataframe 
+      matrix_means <- do.call(rbind, replicate(length(levels), cov_means, simplify = FALSE))
+      df_means <- data.frame(matrix_means)  
+      
+      # use range of x values for this covariate
+      df_pred <- df_means
+      x_values <- as.numeric(levels)
+      df_pred[,cov] <- x_values
+      
+    }
+    
+    # if a covariate value is to be held constant, replace column with specified value
+    # if a value has not been specified, returns an error
+    if (!(is.null(hold))){
+      
+      if (is.null(value)){
+        stop('a value for hold must be specified')
+        
+      } else {
+        df_pred[,hold] <- value
+      }
+    }  
+    
+    colnames(df_pred) <- names
+    
+    # get conditional predictions for this covariate for each sub-model
+    pred_list <- lapply(models, getConditionalPredictions, df_pred)
+    
+    # convert to dataframe
+    y <- as.data.frame(pred_list)
+    
+    # give y names
+    colnames(y) <- paste0('model', 1:ncol(y))
+    
+    # calculate the mean
+    mn <- rowMeans(y, na.rm = TRUE)
+    
+    # and quantiles
+    qs <- t(apply(y, 1, quantile, quantiles, na.rm = TRUE))
+    
+    # and return these alond with the raw data
+    return (cbind(covariate = x_values,
+                  mean = mn,
+                  qs,
+                  y))
+    
+  }
+  
+  # get the number of covariates
+  ncovs <- length(models[[1]]$effects)
+  
+  # get covariate names
+  names <- sapply(models[[1]]$effects, function (x) names(x)[1])
+  
+  # get conditional effects 
+  effects <- lapply(1:ncovs, getConditionalEffect, models)
+  
+  if (plot) {
+    
+    for (i in 1:ncovs) {
+      eff <- effects[[i]]
+      
+      if (is.null(getLevels(i, models))) {
+        # if it's a continuous covariate do a line and CI region
+        
+        # blank plot
+        plot(eff[, 2] ~ eff[, 1], type = 'n', ylim = range(eff[, 3:4]),
+             xlab = names[i], ylab = paste('f(', names[i], ')', sep = ''))
+        # uncertainty region
+        polygon(c(eff[, 1], rev(eff[, 1])),
+                c(eff[, 3], rev(eff[, 4])),
+                col = 'light grey', lty = 0)
+        # mean line
+        lines(eff[, 2] ~ eff[, 1], lwd = 2)
+        
+      } else {
+        # if it's a factor, do dots and bars
+        
+        # blank plot
+        plot(eff[, 2] ~ eff[, 1], type = 'n', ylim = range(eff[, 3:4]),
+             xlab = names[i], ylab = paste('f(', names[i], ')', sep = ''), ...)
+        # uncertainty lines
+        segments(eff[, 1], eff[, 3], y1 = eff[, 4],
+                 col = 'light grey', lwd = 3)
+        # points
+        points(eff[, 2] ~ eff[, 1], pch = 16, cex = 1.5)
+      }
+      
+    }
+    
+  }
+  
+  return(effects)
+  
+}
 

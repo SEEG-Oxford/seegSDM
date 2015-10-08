@@ -8,7 +8,7 @@ Combine conditional effect plots for ensemble BRT runs
 Given a list of BRT model bootstraps (each element an output from \code{\link{runBRT}}), return a list of matrices for, and optionally plot (\code{\link{plot}}), the mean conditional effect curve for each covariate in the model with confidence regions bounded by \code{quantiles}. There is also an option to specify (using \code{hold}) a covariate \code{value} for which conditional effect curves are generated. The \dots argument is passed to \code{plot} and allows some customisation of the plotting outputs. 
 }
 \usage{
-getConditionalEffectPlots(x)
+getConditionalEffectPlots(models, plot = FALSE, quantiles = c(0.025, 0.975), hold = NULL, value = NULL, ...)
 }
 
 \arguments{

@@ -7,33 +7,20 @@
 This package contains a set of streamlined functions to fit species distribution models.
 The current focus is on the ensemble BRT approaches used in the recent [Bhatt et al. dengue paper][2].
 The package is intended to help members of the research group to fit these and similar models, and to let other researchers scrutinise the methodology in detail.
-This package is *not* intended to be used more widely - of course you're welcome to use it and we hope it's helpful, but maintaining it and making it user friendly is not a major focus.
+This package is not designed to be used more widely - of course you're welcome to use it and we hope it's helpful, but maintaining it and making it user-friendly is not a major focus.
 
 
-### Installing and loading the package
+### Installation
 
-To install the package from GitHub you first need to install and load Hadley Wickham's [devtools package][3], like this:
-
-
-```r
-install.packages('devtools')
-library(devtools)
-```
-Now we can use ```install_github``` to install ```seegSDM```
+You can install the package from GitHub using [`devtools`][3]:
 
 ```r
-install_github('SEEG-Oxford/seegSDM')
-```
-
-and load the package and you're ready to go
-
-```r
-library(seegSDM)
+devtools::install_github('SEEG-Oxford/seegSDM')
 ```
 
 ### Reporting bugs
 
-You can report bugs, issues and suggestions for extra functions using the issues button on the right hand side of this page.
+Please report bugs, issues and suggestions for extra functions using the [issues tracker](https://github.com/SEEG-Oxford/seegSDM/issues).
 
 
 ### Tutorial

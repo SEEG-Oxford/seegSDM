@@ -2173,13 +2173,6 @@ runABRAID <- function (mode,
   # be set at `min(64, max_cpus)`.
   
   # ~~~~~~~~
-  # lambda functions  
-  sub <- function(i, pars) {
-    # get the $i^{th}$ row of pars 
-    pars[i, ]
-  }
-  
-  # ~~~~~~~~
   # check inputs are of the correct type and files exist
   modes <- readLines(system.file('data/abraid_modes.txt', package='seegSDM'))
   stopifnot(class(mode) == 'character' &&
@@ -2264,36 +2257,9 @@ runABRAID <- function (mode,
   projection(covariates) <- wgs84(TRUE)
   projection(extent) <- wgs84(TRUE)
   projection(admin) <- wgs84(TRUE)
-  
-  
-  # ~~~~~~~~
-  # Generate pseudo-absence data  
-  
-  # set up range of parameters for use in `extractBhatt`
-  # use a similar, but reduced set to that used in Bhatt et al. (2013)
-  # for dengue.
-  
-  # number of pseudo-absences per occurrence
-  na <- c(1, 4, 8, 12)
-  
-  # number of pseudo-presences per occurrence
-  np <- c(0, 0.025, 0.05, 0.075)
-  
-  # maximum distance from occurrence data
-  mu <- c(10, 20, 30, 40)
-  
-  # get all combinations of these
-  pars <- expand.grid(na = na,
-                      np = np,
-                      mu = mu)
-  
-  # convert this into a list
-  par_list <- lapply(1:nrow(pars),
-                     sub,
-                     pars)
-  
+    
   # get the required number of cpus
-  ncpu <- min(length(par_list),
+  ncpu <- min(64,
               max_cpus)
   
   # start the cluster
@@ -2307,17 +2273,49 @@ runABRAID <- function (mode,
     cat('\nseegSDM loaded on cluster\n\n')
   }
   
-  # generate pseudo-data in parallel
-  data_list <- sfLapply(par_list,
-                        extractBhatt,
-                        occurrence = occurrence,
-                        covariates = covariates,
-                        consensus = extent,
-                        admin = admin, 
-                        factor = discrete)
-  
-  if (verbose) {
-    cat('extractBhatt done\n\n')
+  # prepare absence data
+  if (mode == 'bhatt') {
+    sub <- function(i, pars) {
+      # get the $i^{th}$ row of pars 
+      pars[i, ]
+    }
+    
+    # set up range of parameters for use in `extractBhatt`
+    # use a similar, but reduced set to that used in Bhatt et al. (2013)
+    # for dengue.
+    
+    # number of pseudo-absences per occurrence
+    na <- c(1, 4, 8, 12)
+    
+    # number of pseudo-presences per occurrence
+    np <- c(0, 0.025, 0.05, 0.075)
+    
+    # maximum distance from occurrence data
+    mu <- c(10, 20, 30, 40)
+    
+    # get all combinations of these
+    pars <- expand.grid(na = na,
+                        np = np,
+                        mu = mu)
+    
+    # convert this into a list
+    par_list <- lapply(1:nrow(pars),
+                       sub,
+                       pars)
+    
+    # generate pseudo-data in parallel
+    data_list <- sfLapply(par_list,
+                          extractBhatt,
+                          occurrence = occurrence,
+                          covariates = covariates,
+                          consensus = extent,
+                          admin = admin, 
+                          factor = discrete)
+    if (verbose) {
+      cat('extractBhatt done\n\n')
+    }
+  } else {
+    exit(1)
   }
   
   # run BRT submodels in parallel

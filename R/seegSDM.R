@@ -874,6 +874,174 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
   
 }
 
+extractBatch <- function(batch, covariates, factor, admin, admin_mode="average") {
+  ## Extract a batch of occurrence data
+  ## Takes account of synoptic or temporally resolved covariates, as well as, point and admin data
+  
+  ## Support functions
+  classifyCovaraites <- function (covs) {
+    parseDate <- function (string, partIndex) {
+      # Parse a covariate sub-file name assuming "YYYY-MM-DD" format
+      if (typeof(string) != "character") {
+        return (NA)
+      } else {
+        raw_parts <- strsplit(string, "-")[[1]]
+        parts <- strtoi(raw_parts)
+        if (length(parts) > 3 || length(parts) < 1 || any(is.na(parts)) || any(parts <= 0)) {
+          return (NA)
+        } else {
+          if (length(parts) >= 2 && (nchar(raw_parts[[2]]) != 2 || parts[[2]] > 12)) {
+            return (NA)
+          }
+          if (length(parts) >= 3 && (nchar(raw_parts[[3]]) != 2 || parts[[2]] > 31)) {
+            return (NA)
+          }
+          return (parts)
+        }
+      }
+    }
+    
+    classifyDate <- function (string) {
+      # Work out the temporal type of a covariate sub-file y=year, m=month, d=day
+      parts <- parseDate(string)
+      if (any(is.na(parts))) {
+        return (NA)
+      } else {
+        numb_parts <- length(parts)   
+        if (numb_parts == 1) {
+          return ("y")
+        } else if (numb_parts == 2) {
+          return ("m")
+        } else if (numb_parts == 3) {
+          return ("d")
+        } else {
+          return (NA)
+        }
+      }
+    }
+    
+    classifications <- lapply(covs, function (cov) {
+      # Work out the temporal type of a covariate based on the names of its sub-files, s=single, y=year, m=month, d=day
+      if (typeof(cov) == "list") {
+        dateClasses <- lapply(names(cov), classifyDate)
+        if (any(is.na(dateClasses))) {
+          return (NA)
+        } else if (all(dateClasses == "y")) { 
+          return ("y") 
+        } else if (all(dateClasses == "m")) {
+          return ("m")
+        } else if (all(dateClasses == "d")) {
+          return ("d")
+        } else {
+          return (NA) 
+        }
+      } else if (typeof(cov) == "character" || class(cov)[[1]] == "RasterLayer"){ #RasterLayer or filepath string
+        return ("s")
+      } else {
+        return (NA)
+      }
+    })  
+    if (any(is.na(classifications))) {
+      stop(simpleError("Not all covariates could be classified", call = NULL))
+    }
+    return (classifications)
+  }
+  
+  extractSubBatch <- function (sub_batch, sub_batch_covs, sub_batch_factor) {
+    # Create subBatch results matrix
+    sub_batch_covs_values <- matrix(NA, nrow = nrow(sub_batch), ncol = length(sub_batch_covs))
+    colnames(sub_batch_covs_values) <- names(sub_batch_covs) 
+    
+    points <- sub_batch$Admin == -999
+    
+    # if there are points
+    if (any(points)) {
+      # extract and add to the results
+      sub_batch_covs_values[points, ] <- extract(stack(sub_batch_covs), sub_batch[points, ])
+    }
+    
+    # if there are any polygons
+    if (any(!points)) {
+      # extract them, but treat factors and non-factors differently
+      factor_covs <- sub_batch_factor == TRUE
+      if (admin_mode == "average") {
+        if (any(factor_covs)) {
+          # if there are any factors, get mode of polygon
+          sub_batch_covs_values[!points, factor_covs] <- extractAdmin(sub_batch[!points, ],
+                                                                      stack(sub_batch_covs[which(factor_covs)]),
+                                                                      admin, fun = 'modal')
+        }
+        if (any(!factor_covs)) {
+          # if there are any continuous, get mean of polygon
+          sub_batch_covs_values[!points, !factor_covs] <- extractAdmin(sub_batch[!points, ],
+                                                                       stack(sub_batch_covs[which(!factor_covs)]),
+                                                                       admin, fun = 'mean')
+        }
+      } else if (admin_mode == "random") {
+        # Freya's "Random pixel" stuff here?
+      } else if (admin_mode == "latlong") {
+        sub_batch_covs_values[!points, ] <- extract(stack(sub_batch_covs), sub_batch[!points, ])
+      } else {
+        stop(simpleError("Unknown mode for admin covariate value extraction", call = NULL))
+      }
+    }
+    return (sub_batch_covs_values)
+  }
+  
+  extractTemporalValues <- function (batch_covs_values, cov_class_value, date_format, timestep_size) {
+    # Perform time aware covariate extraction
+    
+    pickTemporalCovariate <- function (temporal_covariates, time=NA) {
+      # Select the appropriate sub-file of each covariate for a given timestep
+      suitable_covs <- temporal_covariates[which(names(temporal_covariates) <= time)]
+      if (length(suitable_covs) == 0) {
+        return (temporal_covariates[[min(names(temporal_covariates))]])
+      } else {
+        return (temporal_covariates[[max(names(suitable_covs))]])
+      }
+    }
+    
+    if (any(cov_class == cov_class_value)) {
+      relevant_covs_idx <- which(cov_class == cov_class_value)
+      covariate_of_interest <- covariates[relevant_covs_idx]
+      covariate_of_interest_factor <- factor[relevant_covs_idx]
+      time_min <- as.Date(cut(min(batch$Date), timestep_size))
+      time_max <- as.Date(cut(max(batch$Date), timestep_size))
+      timesteps <- seq(time_min, time_max, by=timestep_size)
+      for (i in seq_along(timesteps)) {
+        timestep <- format(timesteps[i], date_format)
+        subset <- format(batch$Date, date_format) == timestep
+        if (any(subset)) {
+          # Pick the covariate subfiles for this timestep
+          covariates_for_timestep <- lapply(covariate_of_interest, pickTemporalCovariate, time=timestep)
+          # Extract the values
+          batch_covs_values[subset, relevant_covs_idx] <- extractSubBatch(batch[subset, ], covariates_for_timestep, covariate_of_interest_factor)
+        }
+      }
+    }
+    return(batch_covs_values)
+  }
+  
+  ## Classify the covariates
+  cov_class <- classifyCovaraites(covariates)  
+  
+  ## Create an empty matrix for the extracted covariate records
+  batch_covs_values <- matrix(NA, nrow = nrow(batch), ncol = length(covariates))
+  colnames(batch_covs_values) <- names(covariates)
+  
+  ## Handle non-temporal covariates
+  if (any(cov_class == "s")) {
+    relevant_covs_idx <- which(cov_class == "s")
+    batch_covs_values[, relevant_covs_idx] <- extractSubBatch(batch, covariates[relevant_covs_idx], factor[relevant_covs_idx])
+  }
+  
+  ## Handle temporal covariates
+  batch_covs_values <- extractTemporalValues(batch_covs_values, "y", "%Y", "year")
+  batch_covs_values <- extractTemporalValues(batch_covs_values, "m", "%Y-%m", "month") 
+  batch_covs_values <- extractTemporalValues(batch_covs_values, "d", "%Y-%m-%d", "day") 
+  
+  return (batch_covs_values)
+} 
 
 runBRT <- function (data,
                     gbm.x,

@@ -2253,10 +2253,11 @@ runABRAID <- function (mode,
   # Note the horrible hack of specifying admin 3 as the provided admin 1.
   # These should be ignored since ABRAID should never contain anything other
   # than levels 0, 1 and 2
-  admin <- stack(c(admin0_path,
-                   admin1_path,
-                   admin2_path,
-                   admin1_path))
+  admin <- stack(list(
+    "0"=admin0_path,
+    "1"=admin1_path,
+    "2"=admin2_path,
+    "3"=admin1_path))
   
   # load covariate rasters into a stack
   covariates <- stack(covariate_path)

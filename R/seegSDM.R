@@ -769,7 +769,7 @@ nearestLand <- function (points, raster, max_distance) {
   return (t(sapply(neighbour_list, nearest, raster)))
 }
 
-occurrence2SPDF <- function (occurrence) {
+occurrence2SPDF <- function (occurrence, crs=wgs84(TRUE)) {
   # helper function to convert an occurrence dataframe
   # i.e. one which passes checkOccurrence into a SpatialPointsDataFrame object
   
@@ -780,7 +780,7 @@ occurrence2SPDF <- function (occurrence) {
   occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],
                                        occurrence,
                                        coords.nrs  = coord_cols,
-                                       proj4string = wgs84(TRUE))
+                                       proj4string = crs)
   return (occurrence)
 }
 

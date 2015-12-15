@@ -1043,6 +1043,18 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average")
   return (batch_covs_values)
 } 
 
+selectLatestCovariates <- function(covariates) {
+  ## For a mixed set of temporal and non-temporal raster paths, build a stack containing the most recent covariate sub-file for each covariate
+  selected_covariates <- lapply(covariates, function (cov) {
+    if (typeof(cov) == "list") {
+      return (cov[[max(names(cov))]])
+    } else {
+      return (cov)
+    }
+  })
+  return (stack(selected_covariates))
+}
+
 runBRT <- function (data,
                     gbm.x,
                     gbm.y,

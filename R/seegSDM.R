@@ -2144,8 +2144,7 @@ runABRAID <- function (mode,
                        admin1_path,
                        admin2_path,
                        covariate_path,
-                       discrete = rep(FALSE,
-                                      length(covariate_path)),
+                       discrete,
                        verbose = TRUE,
                        max_cpus = 32,
                        load_seegSDM = function(){ library(seegSDM) },
@@ -2209,6 +2208,8 @@ runABRAID <- function (mode,
   stopifnot(is.function(load_seegSDM))
   
   stopifnot(is.logical(parallel_flag))
+  
+  stopifnot(names(discrete) == names(covariate_path))
     
   # ~~~~~~~~
   # load data
@@ -2258,18 +2259,7 @@ runABRAID <- function (mode,
     "1"=admin1_path,
     "2"=admin2_path,
     "3"=admin1_path))
-  
-  # load covariate rasters into a stack
-  covariates <- stack(covariate_path)
-  
-  # name these with numbers
-  names(covariates) <- seq(nlayers(covariates))
-  
-  # set the coordinate systems for rasters as projected wgs84 (lat/long)
-  projection(covariates) <- wgs84(TRUE)
-  projection(extent) <- wgs84(TRUE)
-  projection(admin) <- wgs84(TRUE)
-    
+
   # get the required number of cpus
   ncpu <- min(64,
               max_cpus)
@@ -2319,7 +2309,7 @@ runABRAID <- function (mode,
     data_list <- sfLapply(par_list,
                           extractBhatt,
                           occurrence = occurrence,
-                          covariates = covariates,
+                          covariates = selectLatestCovariates(covariate_path), #Note: going to have crs issues!
                           consensus = extent,
                           admin = admin, 
                           factor = discrete)
@@ -2339,7 +2329,7 @@ runABRAID <- function (mode,
                          runBRT,
                          gbm.x = 4:ncol(data_list[[1]]),
                          gbm.y = 1,
-                         pred.raster = covariates,
+                         pred.raster = selectLatestCovariates(covariate_path),
                          gbm.coords = 2:3,
                          verbose = verbose)
   
@@ -2376,19 +2366,14 @@ runABRAID <- function (mode,
   # relative influence statistics
   relinf <- getRelInf(model_list)
   
-  # get order of covariates from numeric covariate names
-  cov_order <- as.numeric(gsub('X', '', rownames(relinf)))
-  
-  # append the file paths and names to the results
-  relinf <- cbind(file_path = covariate_path[cov_order],
-                  relinf)
+  # append the names to the results
+  relinf <- cbind(name = rownames(relinf), relinf)
 
-  
   # output this file
   write.csv(relinf,
             'results/relative_influence.csv',
             na = "",
-            row.names = TRUE)
+            row.names = FALSE)
   
   # marginal effect curves
   effects <- getEffectPlots(model_list)
@@ -2412,12 +2397,8 @@ runABRAID <- function (mode,
     # get number of evaluation points
     n <- nrow(effects[[i]])
     
-    # get the number of the covariate
-    cov_number <- as.numeric(gsub('X', '', names(effects)[i]))
-    
     # append file path and name to effect curve
-    effects[[i]] <- cbind(file_path = rep(covariate_path[cov_number],
-                                          n),
+    effects[[i]] <- cbind(file_path = rep(names(effects)[i], n),
                           effects[[i]])
   }
   
@@ -2431,7 +2412,7 @@ runABRAID <- function (mode,
   write.csv(effects,
             'results/effect_curves.csv',
             na = "",
-            row.names = TRUE)
+            row.names = FALSE)
   
   # get summarized prediction raster layers
   

@@ -2330,6 +2330,10 @@ runABRAID <- function (mode,
     exit(1)
   }
   
+  if (verbose) {
+    cat('extraction done\n\n')
+  }
+  
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,

@@ -776,6 +776,11 @@ occurrence2SPDF <- function (occurrence, crs=wgs84(TRUE)) {
   # get column numbers for coordinates
   coord_cols <- match(c('Longitude', 'Latitude'), names(occurrence))
   
+  # check dates
+  if ("Date" %in% names(occurrence)) {
+    occurrence$Date <- as.Date(occurrence$Date)
+  }
+  
   # convert to SPDF
   occurrence <- SpatialPointsDataFrame(occurrence[, coord_cols],
                                        occurrence,
@@ -2214,26 +2219,32 @@ runABRAID <- function (mode,
   
   # check column names are as expected
   stopifnot(sort(colnames(occurrence)) == sort(c('Admin',
+                                            'Date',     
                                             'Disease',
                                             'GAUL',
                                             'Latitude',
                                             'Longitude',
                                             'Weight')))
-
+  
+  # convert it to a SpatialPointsDataFrame
+  # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
+  occurrence <- occurrence2SPDF(occurrence, crs=wgs84(FALSE))
+  
   # occurrence data
   supplementary_occurrence <- read.csv(supplementary_occurrence_path,
                          stringsAsFactors = FALSE)
   
   # check column names are as expected
   stopifnot(sort(colnames(supplementary_occurrence)) == sort(c('Admin',
+                                                          'Date',    
                                                           'Disease',
                                                           'GAUL',
                                                           'Latitude',
                                                           'Longitude')))
-                
+
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
-  occurrence <- occurrence2SPDF(occurrence)
+  supplementary_occurrence <- occurrence2SPDF(supplementary_occurrence, crs=wgs84(FALSE))
   
   # load the definitve extent raster
   extent <- raster(extent_path)

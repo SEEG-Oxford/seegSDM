@@ -2213,12 +2213,9 @@ runABRAID <- function (mode,
   
   stopifnot(file.exists(admin2_path))
   
-  stopifnot(class(covariate_path) == 'character' &&
-              all(file.exists(covariate_path)))
-  
   stopifnot(class(verbose) == 'logical')
   
-  stopifnot(class(discrete) == 'logical' &&
+  stopifnot(class(unlist(discrete)) == 'logical' &&
               length(discrete == length(covariate_path)))
   
   stopifnot(is.function(load_seegSDM))
@@ -2226,7 +2223,10 @@ runABRAID <- function (mode,
   stopifnot(is.logical(parallel_flag))
   
   stopifnot(names(discrete) == names(covariate_path))
-    
+  
+  stopifnot(class(unlist(covariate_path, recursive=TRUE)) == 'character' &&
+              all(file.exists(unlist(covariate_path, recursive=TRUE))))
+  
   # ~~~~~~~~
   # load data
   

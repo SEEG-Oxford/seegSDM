@@ -1045,7 +1045,22 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average")
   batch_covs_values <- extractTemporalValues(batch_covs_values, "m", "%Y-%m", "month") 
   batch_covs_values <- extractTemporalValues(batch_covs_values, "d", "%Y-%m-%d", "day") 
   
-  return (batch_covs_values)
+  # build output data structure
+  results <- cbind(PA = batch$PA,
+                    batch@coords,
+                    batch_covs_values)
+  results <- as.data.frame(results)
+  
+  # if there are any factor covariates, convert the columns in the dataframe
+  if (any(factor)) {
+    facts <- which(factor)
+    for (i in facts) {
+      # plus one to avoid the PA column
+      results[, i + 3] <- factor(results[, i + 3])
+    }
+  }
+  
+  return (results)
 } 
 
 selectLatestCovariates <- function(covariates) {

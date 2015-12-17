@@ -2193,6 +2193,7 @@ runABRAID <- function (mode,
   
   # ~~~~~~~~
   # check inputs are of the correct type and files exist
+  abraidCRS <- crs("+proj=longlat +ellps=WGS84 +no_defs")
   modes <- readLines(system.file('data/abraid_modes.txt', package='seegSDM'))
   stopifnot(class(mode) == 'character' &&
               is.element(mode, modes))
@@ -2244,7 +2245,7 @@ runABRAID <- function (mode,
   
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
-  occurrence <- occurrence2SPDF(occurrence, crs=wgs84(FALSE))
+  occurrence <- occurrence2SPDF(occurrence, crs=abraidCRS)
   
   # occurrence data
   supplementary_occurrence <- read.csv(supplementary_occurrence_path,
@@ -2260,7 +2261,7 @@ runABRAID <- function (mode,
 
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
-  supplementary_occurrence <- occurrence2SPDF(supplementary_occurrence, crs=wgs84(FALSE))
+  supplementary_occurrence <- occurrence2SPDF(supplementary_occurrence, crs=abraidCRS)
   
   # load the definitve extent raster
   extent <- raster(extent_path)

@@ -2350,7 +2350,8 @@ runABRAID <- function (mode,
     "3"=admin1_path))
 
   # get the required number of cpus
-  ncpu <- min(64,
+  nboot <- 64
+  ncpu <- min(nboot,
               max_cpus)
   
   # start the cluster
@@ -2405,6 +2406,27 @@ runABRAID <- function (mode,
     if (verbose) {
       cat('extractBhatt done\n\n')
     }
+  } else if (mode == "all_bias") {
+    presence <- occurrence
+    presence <- occurrence2SPDF(cbind(PA=1, presence@data), crs=abraidCRS)
+    absence <- supplementary_occurrence
+    absence <- occurrence2SPDF(cbind(PA=0, absence@data[, 1:2], Weight=1, absence@data[, 3:6]), crs=abraidCRS)
+    all <- rbind(presence, absence)
+    
+    # create batches
+    batches <- replicate(nboot, subsample(all@data, nrow(all), replace=TRUE), simplify=FALSE)
+    batches <- lapply(batches, occurrence2SPDF, crs=abraidCRS)
+    
+    if (verbose) {
+      cat('batches ready for extract\n\n')
+    }
+    
+    # Do extractions
+    data_list <- sfLapply(batches,
+             extractBatch,
+             covariates = covariate_path,
+             admin = admin, 
+             factor = discrete)
   } else {
     exit(1)
   }

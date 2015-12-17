@@ -1806,6 +1806,79 @@ extractBhatt <- function (pars,
   }
 }
 
+xy2AbraidSPDF <- function (pseudo, crs, pa, weight, date, admin=-999, gaul=NA, disease=NA) {
+  # Coverts an XY matrix to a SpatialPointsDataFrame, with the standard ABRAID column set
+  colnames(pseudo) <- c("Longitude", "Latitude")
+  pseudo <- data.frame(pseudo,
+                       "Weight"=w, 
+                       "Admin"=admin, 
+                       "GAUL"=gaul,
+                       "Disease"=disease,
+                       "Date"=date,
+                       "PA" = pa,
+                       stringsAsFactors = FALSE)
+  return (occurrence2SPDF(pseudo, crs=crs))
+}
+
+abraidBhatt <- function (pars,
+                         occurrence,
+                         covariates,
+                         consensus,
+                         admin,
+                         factor) {
+  # A clone of 'extractBhatt' for use in abraid. 
+  # It behaves the same as extractBhatt, but requires a named list or nested named list of covariates, to perform time aware extraction
+  # Defensive checks are skipped.
+  # WARNING: Future versions will likely return a weight value column & skip pesudo-presence generation
+  
+  # coerce pars into a numeric vector (lapply can pass it as a dataframe)
+  pars <- as.numeric(pars)
+  
+  # get number of occurrence records
+  no <- length(occurrence)
+  
+  # calculate
+  na <- ceiling(pars[1] * no)
+  np <- ceiling(pars[2] * no)
+  mu <- pars[3]
+  
+  # start building the combined data set
+  all <- occurrence
+  all$PA <- rep(1, nrow(all))
+  
+  # pseudo-absences
+  if (na > 0) {
+    # modify the consensus layer (-100:100) to probability scale (0, 1)
+    abs_consensus <- 1 - (consensus + 100) / 200
+    
+    # sample from it, weighted by consensus
+    # (more likely in -100, impossible in +100)
+    p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, spatial=FALSE)
+    p_abs <- xyToAbraidSPDF(p_abs, consensus@crs, 0, NA, sample(toString(occurrence$Date), nrow(pseudo), replace=TRUE))
+    all <- rbind(all, p_abs)
+  }
+  
+  # pseudo-presences
+  if (np > 0) {
+    
+    # modify consensus to the 0, 1 scale and threshold at 'threshold'
+    pres_consensus <- calc(consensus,
+                           fun = function(x) {
+                             ifelse(x <= -25,
+                                    0,
+                                    (x + 100) / 200)
+                           })
+    
+    # sample from it, weighted by consensus (more likely in 100, impossible
+    # below threshold)
+    p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, spatial=FALSE)
+    p_abs <- xyToAbraidSPDF(p_pres, consensus@crs, 1, NA, sample(toString(occurrence$Date), nrow(pseudo), replace=TRUE))
+    all <- rbind(all, p_pres)
+  }
+  
+  # extract covariates 
+  return (extractBatch(all, covariates, factor, admin, admin_mode="average"))
+}
 
 biasGrid <- function(polygons, raster, sigma = 30)
   # create a bias grid from polygons using a gaussian moving window smoother
@@ -2323,9 +2396,9 @@ runABRAID <- function (mode,
     
     # generate pseudo-data in parallel
     data_list <- sfLapply(par_list,
-                          extractBhatt,
+                          abraidBhatt,
                           occurrence = occurrence,
-                          covariates = selectLatestCovariates(covariate_path), #Note: going to have crs issues!
+                          covariates = covariate_path,
                           consensus = extent,
                           admin = admin, 
                           factor = discrete)

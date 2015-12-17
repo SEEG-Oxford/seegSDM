@@ -2291,6 +2291,9 @@ masterMask <- function (rasters) {
     master <- mask(master, rasters[[i]])
   }
   
+  # make all values equal 0
+  master <- master*0
+  
   return(master)
   
 } 

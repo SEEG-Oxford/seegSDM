@@ -13,7 +13,7 @@ selectLatestCovariates(covariates)
 
 \arguments{
   \item{covariates}{
-    A named list of containing \code{RasterLayer} objects, or sublists of \code{RasterLayer} for temporally resolved covariates. Synoptic covariates should have an entry with an approriate name and the \code{RasterLayer} as it's value. Annually resolved covariates should have an entry with an approriate name and a sub-list of files as it's value. The sub-list should name names in the format "YYYY", and values which are the \code{RasterLayer} of each covariate layer. Monthly resolved covariates should be structured in the same way as annual covarites, but use the format "YYYY-MM". Daily resolved covariates should be structured in the same way as annual covarites, but use the format "YYYY-MM-DD". 
+    A named list of containing \code{RasterLayer} objects (or file paths), or sublists of \code{RasterLayer} (or file paths) for temporally resolved covariates. Synoptic covariates should have an entry with an approriate name and the \code{RasterLayer} (or file paths) as it's value. Annually resolved covariates should have an entry with an approriate name and a sub-list of files as it's value. The sub-list should name names in the format "YYYY", and values which are the \code{RasterLayer} (or file paths) of each covariate layer. Monthly resolved covariates should be structured in the same way as annual covariates, but use the format "YYYY-MM". Daily resolved covariates should be structured in the same way as annual covariates, but use the format "YYYY-MM-DD". 
 }
 }
 

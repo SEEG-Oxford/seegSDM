@@ -774,10 +774,10 @@ occurrence2SPDF <- function (occurrence, crs=wgs84(TRUE)) {
   # i.e. one which passes checkOccurrence into a SpatialPointsDataFrame object
   
   # get column numbers for coordinates
-  coord_cols <- match(c('Longitude', 'Latitude'), names(occurrence))
+  coord_cols <- match(c('Longitude', 'Latitude'), colnames(occurrence))
   
   # check dates
-  if ("Date" %in% names(occurrence)) {
+  if ("Date" %in% names(occurrence) && class(occurrence$Date) != "Date") {
     occurrence$Date <- as.Date(occurrence$Date)
   }
   

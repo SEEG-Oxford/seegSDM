@@ -31,14 +31,6 @@ rs <- stack(system.file("external/rlogo.grd", package="raster"))
 # create a master mask
 master_mask <- masterMask(rs)
 
-function (rasters) 
-{
-    master <- rasters[[1]]
-    for (i in 1:nlayers(rasters)) {
-        master <- mask(master, rasters[[i]])
-    }
-    return(master)
-  }
 }
 
 

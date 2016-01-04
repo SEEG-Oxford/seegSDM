@@ -2502,14 +2502,14 @@ runABRAID <- function (mode,
                       return(x)
                     })
   
-  # paste the name of the covariate and the file path in as extra columns
+  # paste the name of the covariate in as extra columns
   for(i in 1:length(effects)) {
     
     # get number of evaluation points
     n <- nrow(effects[[i]])
     
-    # append file path and name to effect curve
-    effects[[i]] <- cbind(file_path = rep(names(effects)[i], n),
+    # append name to effect curve
+    effects[[i]] <- cbind(name = rep(names(effects)[i], n),
                           effects[[i]])
   }
   

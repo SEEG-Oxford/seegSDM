@@ -86,6 +86,7 @@ occurrence$Date <- as.Date(sample(c(
   "2012-03-06", 
   "2012-04-06",
   "2015-03-06"), length(occurrence), replace=TRUE))
+occurrence$PA <- sample(c(0, 1), length(occurrence), replace=TRUE)
 
 # extract all covariates,
 vals <- extractBatch(occurrence, layers, factor, admin, admin_mode="average")

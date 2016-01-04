@@ -1052,8 +1052,9 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average")
   results <- as.data.frame(results)
   
   # if there are any factor covariates, convert the columns in the dataframe
-  if (any(factor)) {
-    facts <- which(factor)
+  factor_vector <- unlist(factor)
+  if (any(factor_vector)) {
+    facts <- which(factor_vector)
     for (i in facts) {
       # plus one to avoid the PA column
       results[, i + 3] <- factor(results[, i + 3])

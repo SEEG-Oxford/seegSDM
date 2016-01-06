@@ -1810,7 +1810,7 @@ xy2AbraidSPDF <- function (pseudo, crs, pa, weight, date, admin=-999, gaul=NA, d
   # Coverts an XY matrix to a SpatialPointsDataFrame, with the standard ABRAID column set
   colnames(pseudo) <- c("Longitude", "Latitude")
   pseudo <- data.frame(pseudo,
-                       "Weight"=w, 
+                       "Weight"=weight, 
                        "Admin"=admin, 
                        "GAUL"=gaul,
                        "Disease"=disease,
@@ -1853,8 +1853,8 @@ abraidBhatt <- function (pars,
     
     # sample from it, weighted by consensus
     # (more likely in -100, impossible in +100)
-    p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, spatial=FALSE)
-    p_abs <- xyToAbraidSPDF(p_abs, consensus@crs, 0, NA, sample(toString(occurrence$Date), na, replace=TRUE))
+    p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
+    p_abs <- xy2AbraidSPDF(p_abs, consensus@crs, 0, NA, sample(occurrence$Date, na, replace=TRUE))
     all <- rbind(all, p_abs)
   }
   
@@ -1871,8 +1871,8 @@ abraidBhatt <- function (pars,
     
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
-    p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, spatial=FALSE)
-    p_abs <- xyToAbraidSPDF(p_pres, consensus@crs, 1, NA, sample(toString(occurrence$Date), np, replace=TRUE))
+    p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
+    p_pres <- xy2AbraidSPDF(p_pres, consensus@crs, 1, NA, sample(occurrence$Date, np, replace=TRUE))
     all <- rbind(all, p_pres)
   }
   

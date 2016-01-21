@@ -8,7 +8,7 @@
 Given a \code{SpatialPointsDataFrame} object \code{batch} with \code{Admin}, \code{GAUL} and \code{Date} columns and a named list of covariate file paths extract the values of \code{covariates}.
 }
 \usage{
-extractBatch(batch, covariates, factor, admin, admin_mode="average")
+extractBatch(batch, covariates, factor, admin, admin_mode="average", load_stack=stack)
 }
 
 \arguments{
@@ -27,6 +27,9 @@ A \code{SpatialPointsDataFrame} of occurrence records containing \emph{at least}
 }
   \item{admin_mode}{
   A string indicating the type of extraction to perform for polygon occurrences. Acceptable values are: "average" (returns the mean value for non-discrete covariates, and the mode for discrete covariates), "random" (returns the value of a random pixel) and "latlong" (returns the value at the lat/long in the \code{SpatialPointsDataFrame}, normally the centroid).
+}
+  \item{load_stack}{
+  (Optional) A function which creates a stack from list of file paths. This can be used to override the crs and/or extent read from the files. If "NA" is specified, raster::stack will be used. 
 }
 }
 

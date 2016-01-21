@@ -879,11 +879,20 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
   
 }
 
-extractBatch <- function(batch, covariates, factor, admin, admin_mode="average") {
+extractBatch <- function(batch, covariates, factor, admin, admin_mode="average", load_stack=NA) {
   ## Extract a batch of occurrence data
   ## Takes account of synoptic or temporally resolved covariates, as well as, point and admin data
   
   ## Support functions
+  createStack <- function(paths) {
+    # Create stack from list of file paths, using load_stack function, if provided
+    if (is.na(load_stack)) {
+      return (stack(paths))
+    } else {
+      return (load_stack(paths))
+    }
+  }
+  
   classifyCovaraites <- function (covs) {
     parseDate <- function (string, partIndex) {
       # Parse a covariate sub-file name assuming "YYYY-MM-DD" format
@@ -962,7 +971,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average")
     # if there are points
     if (any(points)) {
       # extract and add to the results
-      sub_batch_covs_values[points, ] <- extract(stack(sub_batch_covs), sub_batch[points, ])
+      sub_batch_covs_values[points, ] <- extract(createStack(sub_batch_covs), sub_batch[points, ])
     }
     
     # if there are any polygons
@@ -973,19 +982,19 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average")
         if (any(factor_covs)) {
           # if there are any factors, get mode of polygon
           sub_batch_covs_values[!points, factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                      stack(sub_batch_covs[which(factor_covs)]),
+                                                                      createStack(sub_batch_covs[which(factor_covs)]),
                                                                       admin, fun = 'modal')
         }
         if (any(!factor_covs)) {
           # if there are any continuous, get mean of polygon
           sub_batch_covs_values[!points, !factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                       stack(sub_batch_covs[which(!factor_covs)]),
+                                                                       createStack(sub_batch_covs[which(!factor_covs)]),
                                                                        admin, fun = 'mean')
         }
       } else if (admin_mode == "random") {
         # Freya's "Random pixel" stuff here?
       } else if (admin_mode == "latlong") {
-        sub_batch_covs_values[!points, ] <- extract(stack(sub_batch_covs), sub_batch[!points, ])
+        sub_batch_covs_values[!points, ] <- extract(createStack(sub_batch_covs), sub_batch[!points, ])
       } else {
         stop(simpleError("Unknown mode for admin covariate value extraction", call = NULL))
       }
@@ -1063,7 +1072,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average")
   return (results)
 } 
 
-selectLatestCovariates <- function(covariates) {
+selectLatestCovariates <- function(covariates, load_stack=NA) {
   ## For a mixed set of temporal and non-temporal raster paths, build a stack containing the most recent covariate sub-file for each covariate
   selected_covariates <- lapply(covariates, function (cov) {
     if (typeof(cov) == "list") {
@@ -1072,7 +1081,12 @@ selectLatestCovariates <- function(covariates) {
       return (cov)
     }
   })
-  return (stack(selected_covariates))
+  
+  if (is.na(load_stack)) {
+    return (stack(selected_covariates))
+  } else {
+    return (load_stack(selected_covariates))
+  }
 }
 
 runBRT <- function (data,
@@ -1825,7 +1839,8 @@ abraidBhatt <- function (pars,
                          covariates,
                          consensus,
                          admin,
-                         factor) {
+                         factor,
+                         load_stack=NA) {
   # A clone of 'extractBhatt' for use in abraid. 
   # It behaves the same as extractBhatt, but requires a named list or nested named list of covariates, to perform time aware extraction
   # Defensive checks are skipped.
@@ -1854,7 +1869,7 @@ abraidBhatt <- function (pars,
     # sample from it, weighted by consensus
     # (more likely in -100, impossible in +100)
     p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
-    p_abs <- xy2AbraidSPDF(p_abs, consensus@crs, 0, NA, sample(occurrence$Date, na, replace=TRUE))
+    p_abs <- xy2AbraidSPDF(p_abs, crs(all), 0, NA, sample(occurrence$Date, na, replace=TRUE))
     all <- rbind(all, p_abs)
   }
   
@@ -1872,12 +1887,12 @@ abraidBhatt <- function (pars,
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
     p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
-    p_pres <- xy2AbraidSPDF(p_pres, consensus@crs, 1, NA, sample(occurrence$Date, np, replace=TRUE))
+    p_pres <- xy2AbraidSPDF(p_pres, crs(all), 1, NA, sample(occurrence$Date, np, replace=TRUE))
     all <- rbind(all, p_pres)
   }
   
   # extract covariates 
-  return (extractBatch(all, covariates, factor, admin, admin_mode="average"))
+  return (extractBatch(all, covariates, factor, admin, admin_mode="average", load_stack=load_stack))
 }
 
 biasGrid <- function(polygons, raster, sigma = 30)
@@ -2266,7 +2281,7 @@ runABRAID <- function (mode,
   
   # ~~~~~~~~
   # check inputs are of the correct type and files exist
-  abraidCRS <- crs("+proj=longlat +ellps=WGS84 +no_defs")
+  abraidCRS <- crs("+init=epsg:4326")
   modes <- readLines(system.file('data/abraid_modes.txt', package='seegSDM'))
   stopifnot(class(mode) == 'character' &&
               is.element(mode, modes))
@@ -2277,14 +2292,20 @@ runABRAID <- function (mode,
               file.exists(occurrence_path))
   
   stopifnot(class(extent_path) == 'character' &&
-              file.exists(extent_path))
+              file.exists(extent_path) && 
+              compareCRS(raster(extent_path), abraidCRS))
     
   stopifnot(class(supplementary_occurrence_path) == 'character' &&
               file.exists(supplementary_occurrence_path))
 
-  stopifnot(file.exists(admin1_path))
+  stopifnot(file.exists(admin0_path) && 
+              compareCRS(raster(admin0_path), abraidCRS))
   
-  stopifnot(file.exists(admin2_path))
+  stopifnot(file.exists(admin1_path) && 
+              compareCRS(raster(admin1_path), abraidCRS))
+  
+  stopifnot(file.exists(admin2_path) && 
+              compareCRS(raster(admin2_path), abraidCRS))
   
   stopifnot(class(verbose) == 'logical')
   
@@ -2298,7 +2319,8 @@ runABRAID <- function (mode,
   stopifnot(names(discrete) == names(covariate_path))
   
   stopifnot(class(unlist(covariate_path, recursive=TRUE)) == 'character' &&
-              all(file.exists(unlist(covariate_path, recursive=TRUE))))
+              all(file.exists(unlist(covariate_path, recursive=TRUE))) &&
+              all(sapply(sapply(unlist(covariate_path, recursive=TRUE), raster), compareCRS, abraidCRS)))
   
   # ~~~~~~~~
   # load data
@@ -2331,19 +2353,33 @@ runABRAID <- function (mode,
                                                           'GAUL',
                                                           'Latitude',
                                                           'Longitude')))
-
+  # Functions to assist in the loading of raster data. 
+  # This works around the truncation of crs metadata in writen geotiffs.
+  abraidStack <- function(paths) {
+    s <- stack(paths)
+    crs(s) <- abraidCRS
+    extent(s) <- extent(-180, 180, -60, 85)
+    return (s)
+  }
+  abraidRaster <- function(path) {
+    r <- raster(path)
+    crs(r) <- abraidCRS
+    extent(r) <- extent(-180, 180, -60, 85)
+    return (r)
+  }
+  
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
   supplementary_occurrence <- occurrence2SPDF(supplementary_occurrence, crs=abraidCRS)
   
   # load the definitve extent raster
-  extent <- raster(extent_path)
+  extent <- abraidRaster(extent_path)
   
   # load the admin rasters as a stack
   # Note the horrible hack of specifying admin 3 as the provided admin 1.
   # These should be ignored since ABRAID should never contain anything other
   # than levels 0, 1 and 2
-  admin <- stack(list(
+  admin <- abraidStack(list(
     "0"=admin0_path,
     "1"=admin1_path,
     "2"=admin2_path,
@@ -2402,7 +2438,8 @@ runABRAID <- function (mode,
                           covariates = covariate_path,
                           consensus = extent,
                           admin = admin, 
-                          factor = discrete)
+                          factor = discrete,
+                          load_stack = abraidStack)
     if (verbose) {
       cat('extractBhatt done\n\n')
     }
@@ -2440,7 +2477,7 @@ runABRAID <- function (mode,
                          runBRT,
                          gbm.x = 4:ncol(data_list[[1]]),
                          gbm.y = 1,
-                         pred.raster = selectLatestCovariates(covariate_path),
+                         pred.raster = selectLatestCovariates(covariate_path, load_stack=abraidStack),
                          gbm.coords = 2:3,
                          verbose = verbose)
   

@@ -2192,6 +2192,18 @@ wgs84 <- function (projected = FALSE)
   }
 }
 
+balanceWeights <- function(data) 
+  # given a mixed spatial data frame of presence and absence data, ensure the 
+  # sum of the weights of the presences and absences are balanced
+{
+  presence <- data$PA == 1
+  absence <- data$PA == 0
+  presence_total <- sum(data[presence, ]$Weight)
+  absence_total <- sum(data[absence, ]$Weight)
+  data[absence, 'Weight'] <- data[absence, ]$Weight * (presence_total / absence_total)
+  return (data)
+}
+
 percCover <- function(raster, template, points, codes)
   # given discrete high res (raster1) and low res (raster2) images and points
   # calculate the % cover of each class of raster1 in the cell of raster2
@@ -2458,6 +2470,12 @@ runABRAID <- function (mode,
   
   if (verbose) {
     cat('extraction done\n\n')
+  }
+  
+  # balance weights
+  data_list <- sfLapply(data_list, balanceWeights)
+  if (verbose) {
+    cat('balance done\n\n')
   }
   
   # run BRT submodels in parallel

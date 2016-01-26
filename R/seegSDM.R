@@ -2463,6 +2463,7 @@ runABRAID <- function (mode,
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,
+                         wt = 'Weight',
                          gbm.x = 5:ncol(data_list[[1]]),
                          gbm.y = 1,
                          pred.raster = selectLatestCovariates(covariate_path, load_stack=abraidStack),

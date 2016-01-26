@@ -1047,6 +1047,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
   
   # build output data structure
   results <- cbind(PA = batch$PA,
+                    Weight = batch$Weight,
                     batch@coords,
                     batch_covs_values)
   results <- as.data.frame(results)
@@ -2462,10 +2463,10 @@ runABRAID <- function (mode,
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,
-                         gbm.x = 4:ncol(data_list[[1]]),
+                         gbm.x = 5:ncol(data_list[[1]]),
                          gbm.y = 1,
                          pred.raster = selectLatestCovariates(covariate_path, load_stack=abraidStack),
-                         gbm.coords = 2:3,
+                         gbm.coords = 3:4,
                          verbose = verbose)
   
   if (verbose) {

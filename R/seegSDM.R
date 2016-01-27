@@ -1857,7 +1857,7 @@ abraidBhatt <- function (pars,
     # sample from it, weighted by consensus
     # (more likely in -100, impossible in +100)
     p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
-    p_abs <- xy2AbraidSPDF(p_abs, crs(all), 0, NA, sample(occurrence$Date, na, replace=TRUE))
+    p_abs <- xy2AbraidSPDF(p_abs, crs(all), 0, 1, sample(occurrence$Date, na, replace=TRUE))
     all <- rbind(all, p_abs)
   }
   
@@ -1875,7 +1875,7 @@ abraidBhatt <- function (pars,
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
     p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
-    p_pres <- xy2AbraidSPDF(p_pres, crs(all), 1, NA, sample(occurrence$Date, np, replace=TRUE))
+    p_pres <- xy2AbraidSPDF(p_pres, crs(all), 1, 1, sample(occurrence$Date, np, replace=TRUE))
     all <- rbind(all, p_pres)
   }
   

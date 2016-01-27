@@ -879,20 +879,11 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
   
 }
 
-extractBatch <- function(batch, covariates, factor, admin, admin_mode="average", load_stack=NA) {
+extractBatch <- function(batch, covariates, factor, admin, admin_mode="average", load_stack=stack) {
   ## Extract a batch of occurrence data
   ## Takes account of synoptic or temporally resolved covariates, as well as, point and admin data
   
   ## Support functions
-  createStack <- function(paths) {
-    # Create stack from list of file paths, using load_stack function, if provided
-    if (is.na(load_stack)) {
-      return (stack(paths))
-    } else {
-      return (load_stack(paths))
-    }
-  }
-  
   classifyCovaraites <- function (covs) {
     parseDate <- function (string, partIndex) {
       # Parse a covariate sub-file name assuming "YYYY-MM-DD" format
@@ -971,7 +962,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     # if there are points
     if (any(points)) {
       # extract and add to the results
-      sub_batch_covs_values[points, ] <- extract(createStack(sub_batch_covs), sub_batch[points, ])
+      sub_batch_covs_values[points, ] <- extract(load_stack(sub_batch_covs), sub_batch[points, ])
     }
     
     # if there are any polygons
@@ -982,19 +973,19 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
         if (any(factor_covs)) {
           # if there are any factors, get mode of polygon
           sub_batch_covs_values[!points, factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                      createStack(sub_batch_covs[which(factor_covs)]),
+                                                                      load_stack(sub_batch_covs[which(factor_covs)]),
                                                                       admin, fun = 'modal')
         }
         if (any(!factor_covs)) {
           # if there are any continuous, get mean of polygon
           sub_batch_covs_values[!points, !factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                       createStack(sub_batch_covs[which(!factor_covs)]),
+                                                                       load_stack(sub_batch_covs[which(!factor_covs)]),
                                                                        admin, fun = 'mean')
         }
       } else if (admin_mode == "random") {
         # Freya's "Random pixel" stuff here?
       } else if (admin_mode == "latlong") {
-        sub_batch_covs_values[!points, ] <- extract(createStack(sub_batch_covs), sub_batch[!points, ])
+        sub_batch_covs_values[!points, ] <- extract(load_stack(sub_batch_covs), sub_batch[!points, ])
       } else {
         stop(simpleError("Unknown mode for admin covariate value extraction", call = NULL))
       }
@@ -1072,7 +1063,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
   return (results)
 } 
 
-selectLatestCovariates <- function(covariates, load_stack=NA) {
+selectLatestCovariates <- function(covariates, load_stack=stack) {
   ## For a mixed set of temporal and non-temporal raster paths, build a stack containing the most recent covariate sub-file for each covariate
   selected_covariates <- lapply(covariates, function (cov) {
     if (typeof(cov) == "list") {
@@ -1082,11 +1073,7 @@ selectLatestCovariates <- function(covariates, load_stack=NA) {
     }
   })
   
-  if (is.na(load_stack)) {
-    return (stack(selected_covariates))
-  } else {
-    return (load_stack(selected_covariates))
-  }
+  return (load_stack(selected_covariates))
 }
 
 runBRT <- function (data,
@@ -1840,7 +1827,7 @@ abraidBhatt <- function (pars,
                          consensus,
                          admin,
                          factor,
-                         load_stack=NA) {
+                         load_stack=stack) {
   # A clone of 'extractBhatt' for use in abraid. 
   # It behaves the same as extractBhatt, but requires a named list or nested named list of covariates, to perform time aware extraction
   # Defensive checks are skipped.

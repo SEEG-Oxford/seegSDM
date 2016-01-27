@@ -29,7 +29,7 @@ A \code{SpatialPointsDataFrame} of occurrence records containing \emph{at least}
   A string indicating the type of extraction to perform for polygon occurrences. Acceptable values are: "average" (returns the mean value for non-discrete covariates, and the mode for discrete covariates), "random" (returns the value of a random pixel) and "latlong" (returns the value at the lat/long in the \code{SpatialPointsDataFrame}, normally the centroid).
 }
   \item{load_stack}{
-  (Optional) A function which creates a stack from list of file paths. This can be used to override the crs and/or extent read from the files. If "NA" is specified, raster::stack will be used. 
+  (Optional) A function which creates a stack from list of file paths. This can be used to override the crs and/or extent read from the files. Default is \code{raster::stack}. 
 }
 }
 

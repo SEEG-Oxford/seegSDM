@@ -16,7 +16,7 @@ selectLatestCovariates(covariates)
     A named list of containing \code{RasterLayer} objects (or file paths), or sublists of \code{RasterLayer} (or file paths) for temporally resolved covariates. Synoptic covariates should have an entry with an approriate name and the \code{RasterLayer} (or file paths) as it's value. Annually resolved covariates should have an entry with an approriate name and a sub-list of files as it's value. The sub-list should name names in the format "YYYY", and values which are the \code{RasterLayer} (or file paths) of each covariate layer. Monthly resolved covariates should be structured in the same way as annual covariates, but use the format "YYYY-MM". Daily resolved covariates should be structured in the same way as annual covariates, but use the format "YYYY-MM-DD". 
 }
   \item{load_stack}{
-  (Optional) A function which creates a stack from list of file paths. This can be used to override the crs and/or extent read from the files. If "NA" is specified, raster::stack will be used. 
+  (Optional) A function which creates a stack from list of file paths. This can be used to override the crs and/or extent read from the files. Default is \code{raster::stack}. 
 }
 }
 

@@ -8,12 +8,15 @@ Convert occurrence dataframe to a SpatialPointsDataFrame
 A simple helper function to convert a datframe containing occurrence data into a \code{SpatialPointsDataFrame} for use with other \code{seegSDM} functions.
 }
 \usage{
-occurrence2SPDF(occurrence)
+occurrence2SPDF(occurrence, crs=wgs84(TRUE))
 }
 
 \arguments{
   \item{occurrence}{
 A dataframe containing \emph{at least} the columns \code{Latitude} and \code{Longitude} coordinates.
+}
+ \item{crs}{
+The CRS for the occurrence data (default: projected WGS84).
 }
 }
 

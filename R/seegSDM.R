@@ -2483,10 +2483,10 @@ runABRAID <- function (mode,
   model_list <- sfLapply(data_list,
                          runBRT,
                          wt = 'Weight',
-                         gbm.x = 5:ncol(data_list[[1]]),
-                         gbm.y = 1,
+                         gbm.x = names(covariate_path),
+                         gbm.y = 'PA',
                          pred.raster = selectLatestCovariates(covariate_path, load_stack=abraidStack),
-                         gbm.coords = 3:4,
+                         gbm.coords = c('Longitude', 'Latitude'),
                          verbose = verbose)
   
   if (verbose) {

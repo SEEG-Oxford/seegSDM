@@ -882,6 +882,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 extractBatch <- function(batch, covariates, factor, admin, admin_mode="average", load_stack=stack) {
   ## Extract a batch of occurrence data
   ## Takes account of synoptic or temporally resolved covariates, as well as, point and admin data
+  ## The "PA" and "Weight" columns (+ Lat/Long) of the input data are retained in the output
   
   ## Support functions
   classifyCovaraites <- function (covs) {
@@ -1832,7 +1833,7 @@ abraidBhatt <- function (pars,
   # A clone of 'extractBhatt' for use in abraid. 
   # It behaves the same as extractBhatt, but requires a named list or nested named list of covariates, to perform time aware extraction
   # Defensive checks are skipped.
-  # WARNING: Future versions will likely return a weight value column & skip pesudo-presence generation
+  # Unlike extractBhatt, the occurrence data should contains a "Weight" column, this column is persisted in to the results (column 2).
   
   # coerce pars into a numeric vector (lapply can pass it as a dataframe)
   pars <- as.numeric(pars)

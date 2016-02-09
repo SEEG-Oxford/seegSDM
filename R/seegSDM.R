@@ -1910,7 +1910,7 @@ abraidBhatt <- function (pars,
   }
   
   # extract covariates 
-  return (extractBatch(all, covariates, factor, admin, admin_mode="average", load_stack=load_stack))
+  return (extractBatch(all, covariates, factor, admin, admin_mode="random", load_stack=load_stack))
 }
 
 biasGrid <- function(polygons, raster, sigma = 30)
@@ -2493,7 +2493,8 @@ runABRAID <- function (mode,
              extractBatch,
              covariates = covariate_path,
              admin = admin, 
-             factor = discrete)
+             factor = discrete,
+             admin_mode="random")
   } else {
     exit(1)
   }

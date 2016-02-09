@@ -971,6 +971,8 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
       # extract them, but treat factors and non-factors differently
       factor_covs <- sub_batch_factor == TRUE
       if (admin_mode == "average") {
+        # Gets the mean or mode value of the covariates GAUL zone 
+        
         if (any(factor_covs)) {
           # if there are any factors, get mode of polygon
           sub_batch_covs_values[!points, factor_covs] <- extractAdmin(sub_batch[!points, ],
@@ -984,7 +986,34 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
                                                                        admin, fun = 'mean')
         }
       } else if (admin_mode == "random") {
-        # Freya's "Random pixel" stuff here?
+        # Gets a random value from the covariates GAUL zone 
+        
+        sub_batch_cov_stack <- load_stack(sub_batch_covs)
+         
+        # Get non-precise levels
+        levels <- unique(sub_batch$Admin[!points])
+        
+        for (level in levels) {
+          # get GAUL codes for this level
+          level_records <- sub_batch$Admin == level
+          level_GAULs <- unique(sub_batch$GAUL[level_records])
+          
+          # get the admin layer for this level
+          ad <- admin[[level + 1]]
+          
+          for (gaul in level_GAULs) {
+            # find the points we are extracting for this level/gaul pair
+            target_records <- level_records & sub_batch$GAUL == gaul
+            target_count <- sum(target_records) # sum is much faster count for bool vectors
+            
+            # find the cell indexs for the gaul poly zone, pick a random set of those cells
+            zone_cells <- which(getValues(ad) == gaul)
+            random_cells <- sample(zone_cells, target_count, replace=TRUE)
+            
+            # extract chosen pixels
+            sub_batch_covs_values[target_records, ] <- sub_batch_cov_stack[random_cells]
+          }
+        }
       } else if (admin_mode == "latlong") {
         sub_batch_covs_values[!points, ] <- extract(load_stack(sub_batch_covs), sub_batch[!points, ])
       } else {

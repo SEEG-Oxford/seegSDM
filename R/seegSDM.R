@@ -1000,15 +1000,15 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
           
           # get the admin layer for this level
           ad <- getValues(admin[[level + 1]])
-          
+          ad <- split(seq_along(ad), ad)
+
           for (gaul in level_GAULs) {
             # find the points we are extracting for this level/gaul pair
             target_records <- level_records & sub_batch$GAUL == gaul
             target_count <- sum(target_records) # sum is much faster count for bool vectors
             
             # find the cell indexs for the gaul poly zone, pick a random set of those cells
-            zone_cells <- which(ad == gaul)
-            random_cells <- sample(zone_cells, target_count, replace=TRUE)
+            random_cells <- sample(ad[[as.character(gaul)]], target_count, replace=TRUE)
             
             # extract chosen pixels
             sub_batch_covs_values[target_records, ] <- sub_batch_cov_stack[random_cells]

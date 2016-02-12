@@ -988,15 +988,17 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
       } else if (admin_mode == "random") {
         # Gets a random value from the covariates GAUL zone 
         
-        sub_batch_cov_stack <- load_stack(sub_batch_covs)
-         
         # Get non-precise levels
-        levels <- unique(sub_batch$Admin[!points])
+        admin_data <- sub_batch[!points, ]
+        levels <- unique(admin_data$Admin)
+        
+        admin_count <- length(admin_data)
+        admin_cells <- vector(length = admin_count, mode = "integer")
         
         for (level in levels) {
           # get GAUL codes for this level
-          level_records <- sub_batch$Admin == level
-          level_GAULs <- unique(sub_batch$GAUL[level_records])
+          level_records <- admin_data$Admin == level
+          level_GAULs <- unique(admin_data$GAUL[level_records])
           
           # get the admin layer for this level
           ad <- getValues(admin[[level + 1]])
@@ -1004,16 +1006,18 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
 
           for (gaul in level_GAULs) {
             # find the points we are extracting for this level/gaul pair
-            target_records <- level_records & sub_batch$GAUL == gaul
+            target_records <- level_records & admin_data$GAUL == gaul
             target_count <- sum(target_records) # sum is much faster count for bool vectors
             
             # find the cell indexs for the gaul poly zone, pick a random set of those cells
             random_cells <- sample(ad[[as.character(gaul)]], target_count, replace=TRUE)
             
-            # extract chosen pixels
-            sub_batch_covs_values[target_records, ] <- sub_batch_cov_stack[random_cells]
+            admin_cells[target_records] <- random_cells
           }
         }
+        
+        # extract the cell values
+        sub_batch_covs_values[!points, ] <- load_stack(sub_batch_covs)[admin_cells]
       } else if (admin_mode == "latlong") {
         sub_batch_covs_values[!points, ] <- extract(load_stack(sub_batch_covs), sub_batch[!points, ])
       } else {

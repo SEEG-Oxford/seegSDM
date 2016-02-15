@@ -882,6 +882,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
 extractBatch <- function(batch, covariates, factor, admin, admin_mode="average", load_stack=stack) {
   ## Extract a batch of occurrence data
   ## Takes account of synoptic or temporally resolved covariates, as well as, point and admin data
+  ## The "PA" and "Weight" columns (+ Lat/Long) of the input data are retained in the output
   
   ## Support functions
   classifyCovaraites <- function (covs) {
@@ -1047,6 +1048,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
   
   # build output data structure
   results <- cbind(PA = batch$PA,
+                    Weight = batch$Weight,
                     batch@coords,
                     batch_covs_values)
   results <- as.data.frame(results)
@@ -1831,7 +1833,7 @@ abraidBhatt <- function (pars,
   # A clone of 'extractBhatt' for use in abraid. 
   # It behaves the same as extractBhatt, but requires a named list or nested named list of covariates, to perform time aware extraction
   # Defensive checks are skipped.
-  # WARNING: Future versions will likely return a weight value column & skip pesudo-presence generation
+  # Unlike extractBhatt, the occurrence data should contains a "Weight" column, this column is persisted in to the results (column 2).
   
   # coerce pars into a numeric vector (lapply can pass it as a dataframe)
   pars <- as.numeric(pars)
@@ -1856,7 +1858,7 @@ abraidBhatt <- function (pars,
     # sample from it, weighted by consensus
     # (more likely in -100, impossible in +100)
     p_abs <- bgDistance(na, occurrence, abs_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
-    p_abs <- xy2AbraidSPDF(p_abs, crs(all), 0, NA, sample(occurrence$Date, na, replace=TRUE))
+    p_abs <- xy2AbraidSPDF(p_abs, crs(all), 0, 1, sample(occurrence$Date, na, replace=TRUE))
     all <- rbind(all, p_abs)
   }
   
@@ -1874,7 +1876,7 @@ abraidBhatt <- function (pars,
     # sample from it, weighted by consensus (more likely in 100, impossible
     # below threshold)
     p_pres <- bgDistance(np, occurrence, pres_consensus, mu, prob = TRUE, spatial=FALSE, replace=TRUE)
-    p_pres <- xy2AbraidSPDF(p_pres, crs(all), 1, NA, sample(occurrence$Date, np, replace=TRUE))
+    p_pres <- xy2AbraidSPDF(p_pres, crs(all), 1, 1, sample(occurrence$Date, np, replace=TRUE))
     all <- rbind(all, p_pres)
   }
   
@@ -2191,6 +2193,18 @@ wgs84 <- function (projected = FALSE)
   }
 }
 
+balanceWeights <- function(data) 
+  # given a mixed spatial data frame of presence and absence data, ensure the 
+  # sum of the weights of the presences and absences are balanced
+{
+  presence <- data$PA == 1
+  absence <- data$PA == 0
+  presence_total <- sum(data[presence, ]$Weight)
+  absence_total <- sum(data[absence, ]$Weight)
+  data[absence, 'Weight'] <- data[absence, ]$Weight * (presence_total / absence_total)
+  return (data)
+}
+
 percCover <- function(raster, template, points, codes)
   # given discrete high res (raster1) and low res (raster2) images and points
   # calculate the % cover of each class of raster1 in the cell of raster2
@@ -2459,13 +2473,20 @@ runABRAID <- function (mode,
     cat('extraction done\n\n')
   }
   
+  # balance weights
+  data_list <- sfLapply(data_list, balanceWeights)
+  if (verbose) {
+    cat('balance done\n\n')
+  }
+  
   # run BRT submodels in parallel
   model_list <- sfLapply(data_list,
                          runBRT,
-                         gbm.x = 4:ncol(data_list[[1]]),
-                         gbm.y = 1,
+                         wt = 'Weight',
+                         gbm.x = names(covariate_path),
+                         gbm.y = 'PA',
                          pred.raster = selectLatestCovariates(covariate_path, load_stack=abraidStack),
-                         gbm.coords = 2:3,
+                         gbm.coords = c('Longitude', 'Latitude'),
                          verbose = verbose)
   
   if (verbose) {

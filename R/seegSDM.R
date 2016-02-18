@@ -953,14 +953,32 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     return (classifications)
   }
   
-  extractSubBatch <- function (sub_batch, sub_batch_covs, sub_batch_factor) {
+  findZones <- function (batch) {
+    # Returns a list of (level->vec_of_gauls)
+    zones <- split(batch$GAUL, batch$Admin)
+    zones <- zones[names(zones) != '-999']
+    zones <- lapply(zones, unique)
+    return(zones)
+  }
+  
+  findZonePixels <- function (zones, admin) {
+    # Returns a list_of_(level->list_of_(gaul->vec_of_cells_pos))
+    levels <- as.list(names(zones))
+    names(levels) <- names(zones)
+    return (lapply(levels, function (level) {
+      vals <- getValues(admin[[paste('admin', level, sep='')]])
+      vals <- split(seq_along(vals), vals)
+      return (vals[names(vals) %in% zones[[level]]])
+    }))
+  }
+
+  extractSubBatch <- function (sub_batch, sub_batch_covs, sub_batch_factor, zones) {
     # Create subBatch results matrix
     sub_batch_covs_values <- matrix(NA, nrow = nrow(sub_batch), ncol = length(sub_batch_covs))
     colnames(sub_batch_covs_values) <- names(sub_batch_covs) 
-    
-    points <- sub_batch$Admin == -999
-    
+
     # if there are points
+    points <- sub_batch$Admin == -999
     if (any(points)) {
       # extract and add to the results
       sub_batch_covs_values[points, ] <- extract(load_stack(sub_batch_covs), sub_batch[points, ])
@@ -989,37 +1007,28 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
       } else if (admin_mode == "random") {
         # Gets a random value from the covariates GAUL zone 
         
-        # Get non-precise levels
+        # Get non-precise levels and the uniq gauls for those levels
         admin_data <- sub_batch[!points, ]
-        levels <- unique(admin_data$Admin)
+        sub_batch_zones <- findZones(admin_data)
         
-        admin_count <- length(admin_data)
-        admin_cells <- vector(length = admin_count, mode = "integer")
+        # create a vector to hold cell numbers
+        admin_cells <- vector(length = length(admin_data), mode = "integer")
         
-        for (level in levels) {
-          # get GAUL codes for this level
-          level_records <- admin_data$Admin == level
-          level_GAULs <- unique(admin_data$GAUL[level_records])
-          
-          # get the admin layer for this level
-          ad <- getValues(admin[[level + 1]])
-          ad <- split(seq_along(ad), ad)
-
-          for (gaul in level_GAULs) {
-            # find the points we are extracting for this level/gaul pair
-            target_records <- level_records & admin_data$GAUL == gaul
-            target_count <- sum(target_records) # sum is much faster count for bool vectors
+        for (level in names(sub_batch_zones)) {
+          for (gaul in sub_batch_zones[[level]]) {
+            # find the points we are extracting for this zone
+            target_records <- admin_data$Admin == level & admin_data$GAUL == gaul
             
-            # find the cell indexs for the gaul poly zone, pick a random set of those cells
-            random_cells <- sample(ad[[as.character(gaul)]], target_count, replace=TRUE)
-            
-            admin_cells[target_records] <- random_cells
+            # find the cell positions for this zone
+            # pick a random set of the zone cells
+            admin_cells[target_records] <- sample(zones[[as.character(level)]][[as.character(gaul)]], sum(target_records), replace=TRUE)
           }
         }
         
         # extract the cell values
         sub_batch_covs_values[!points, ] <- load_stack(sub_batch_covs)[admin_cells]
       } else if (admin_mode == "latlong") {
+        # Get the value from the covariates for the lat/long (centroid)
         sub_batch_covs_values[!points, ] <- extract(load_stack(sub_batch_covs), sub_batch[!points, ])
       } else {
         stop(simpleError("Unknown mode for admin covariate value extraction", call = NULL))
@@ -1055,7 +1064,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
           # Pick the covariate subfiles for this timestep
           covariates_for_timestep <- lapply(covariate_of_interest, pickTemporalCovariate, time=timestep)
           # Extract the values
-          batch_covs_values[subset, relevant_covs_idx] <- extractSubBatch(batch[subset, ], covariates_for_timestep, covariate_of_interest_factor)
+          batch_covs_values[subset, relevant_covs_idx] <- extractSubBatch(batch[subset, ], covariates_for_timestep, covariate_of_interest_factor, zones)
         }
       }
     }
@@ -1068,11 +1077,17 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
   ## Create an empty matrix for the extracted covariate records
   batch_covs_values <- matrix(NA, nrow = nrow(batch), ncol = length(covariates))
   colnames(batch_covs_values) <- names(covariates)
+
+  ## Find zones (if required)
+  zones <- list()
+  if (admin_mode == "random") {
+    zones <- findZonePixels(findZones(batch), admin)
+  }
   
   ## Handle non-temporal covariates
   if (any(cov_class == "s")) {
     relevant_covs_idx <- which(cov_class == "s")
-    batch_covs_values[, relevant_covs_idx] <- extractSubBatch(batch, covariates[relevant_covs_idx], factor[relevant_covs_idx])
+    batch_covs_values[, relevant_covs_idx] <- extractSubBatch(batch, covariates[relevant_covs_idx], factor[relevant_covs_idx], zones)
   }
   
   ## Handle temporal covariates

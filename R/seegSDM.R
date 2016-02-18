@@ -968,22 +968,23 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     
     # if there are any polygons
     if (any(!points)) {
-      # extract them, but treat factors and non-factors differently
-      factor_covs <- sub_batch_factor == TRUE
       if (admin_mode == "average") {
-        # Gets the mean or mode value of the covariates GAUL zone 
-        
-        if (any(factor_covs)) {
-          # if there are any factors, get mode of polygon
-          sub_batch_covs_values[!points, factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                      load_stack(sub_batch_covs[which(factor_covs)]),
-                                                                      admin, fun = 'modal')
+        # Gets the mean or mode value of the covariates zone 
+        discrete_covs <- names(sub_batch_factor)[sub_batch_factor == TRUE]
+        if (length(discrete_covs) != 0) {
+          # if there are any factors, get mode of polygon. `modal` on can only cope with one covariate at a time
+          for(cov in discrete_covs) {
+            sub_batch_covs_values[!points, cov] <- extractAdmin(sub_batch[!points, ],
+                                                                load_stack(sub_batch_covs[cov]),
+                                                                admin, fun = 'modal')
+          }
         }
-        if (any(!factor_covs)) {
+        continous_covs <- names(sub_batch_factor)[sub_batch_factor == FALSE]
+        if (length(continous_covs) != 0) {
           # if there are any continuous, get mean of polygon
-          sub_batch_covs_values[!points, !factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                       load_stack(sub_batch_covs[which(!factor_covs)]),
-                                                                       admin, fun = 'mean')
+          sub_batch_covs_values[!points, continous_covs] <- extractAdmin(sub_batch[!points, ],
+                                                                         load_stack(sub_batch_covs[continous_covs]),
+                                                                         admin, fun = 'mean')
         }
       } else if (admin_mode == "random") {
         # Gets a random value from the covariates GAUL zone 

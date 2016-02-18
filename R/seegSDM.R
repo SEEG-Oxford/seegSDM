@@ -888,7 +888,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
   classifyCovaraites <- function (covs) {
     parseDate <- function (string, partIndex) {
       # Parse a covariate sub-file name assuming "YYYY-MM-DD" format
-      if (typeof(string) != "character") {
+      if (!is.character(string)) {
         return (NA)
       } else {
         raw_parts <- strsplit(string, "-")[[1]]
@@ -928,7 +928,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     
     classifications <- lapply(covs, function (cov) {
       # Work out the temporal type of a covariate based on the names of its sub-files, s=single, y=year, m=month, d=day
-      if (typeof(cov) == "list") {
+      if (is.list(cov)) {
         dateClasses <- lapply(names(cov), classifyDate)
         if (any(is.na(dateClasses))) {
           return (NA)
@@ -941,7 +941,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
         } else {
           return (NA) 
         }
-      } else if (typeof(cov) == "character" || class(cov)[[1]] == "RasterLayer"){ #RasterLayer or filepath string
+      } else if (is.character(cov) || class(cov)[[1]] == "RasterLayer"){ #RasterLayer or filepath string
         return ("s")
       } else {
         return (NA)
@@ -1101,7 +1101,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
 selectLatestCovariates <- function(covariates, load_stack=stack) {
   ## For a mixed set of temporal and non-temporal raster paths, build a stack containing the most recent covariate sub-file for each covariate
   selected_covariates <- lapply(covariates, function (cov) {
-    if (typeof(cov) == "list") {
+    if (is.list(cov)) {
       return (cov[[max(names(cov))]])
     } else {
       return (cov)

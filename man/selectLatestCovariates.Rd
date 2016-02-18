@@ -8,7 +8,7 @@
  From a named list containing synoptic and temporally resolved covariate layers, build a stack containing only the latest layer for each covariate (highest date).
 }
 \usage{
-selectLatestCovariates(covariates)
+selectLatestCovariates(covariates, load_stack=stack)
 }
 
 \arguments{

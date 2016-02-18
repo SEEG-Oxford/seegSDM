@@ -888,7 +888,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
   classifyCovaraites <- function (covs) {
     parseDate <- function (string, partIndex) {
       # Parse a covariate sub-file name assuming "YYYY-MM-DD" format
-      if (typeof(string) != "character") {
+      if (!is.character(string)) {
         return (NA)
       } else {
         raw_parts <- strsplit(string, "-")[[1]]
@@ -928,7 +928,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     
     classifications <- lapply(covs, function (cov) {
       # Work out the temporal type of a covariate based on the names of its sub-files, s=single, y=year, m=month, d=day
-      if (typeof(cov) == "list") {
+      if (is.list(cov)) {
         dateClasses <- lapply(names(cov), classifyDate)
         if (any(is.na(dateClasses))) {
           return (NA)
@@ -941,7 +941,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
         } else {
           return (NA) 
         }
-      } else if (typeof(cov) == "character" || class(cov)[[1]] == "RasterLayer"){ #RasterLayer or filepath string
+      } else if (is.character(cov) || class(cov)[[1]] == "RasterLayer"){ #RasterLayer or filepath string
         return ("s")
       } else {
         return (NA)
@@ -953,14 +953,32 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     return (classifications)
   }
   
-  extractSubBatch <- function (sub_batch, sub_batch_covs, sub_batch_factor) {
+  findZones <- function (batch) {
+    # Returns a list of (level->vec_of_gauls)
+    zones <- split(batch$GAUL, batch$Admin)
+    zones <- zones[names(zones) != '-999']
+    zones <- lapply(zones, unique)
+    return(zones)
+  }
+  
+  findZonePixels <- function (zones, admin) {
+    # Returns a list_of_(level->list_of_(gaul->vec_of_cells_pos))
+    levels <- as.list(names(zones))
+    names(levels) <- names(zones)
+    return (lapply(levels, function (level) {
+      vals <- getValues(admin[[paste('admin', level, sep='')]])
+      vals <- split(seq_along(vals), vals)
+      return (vals[names(vals) %in% zones[[level]]])
+    }))
+  }
+
+  extractSubBatch <- function (sub_batch, sub_batch_covs, sub_batch_factor, zones) {
     # Create subBatch results matrix
     sub_batch_covs_values <- matrix(NA, nrow = nrow(sub_batch), ncol = length(sub_batch_covs))
     colnames(sub_batch_covs_values) <- names(sub_batch_covs) 
-    
-    points <- sub_batch$Admin == -999
-    
+
     # if there are points
+    points <- sub_batch$Admin == -999
     if (any(points)) {
       # extract and add to the results
       sub_batch_covs_values[points, ] <- extract(load_stack(sub_batch_covs), sub_batch[points, ])
@@ -968,24 +986,49 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     
     # if there are any polygons
     if (any(!points)) {
-      # extract them, but treat factors and non-factors differently
-      factor_covs <- sub_batch_factor == TRUE
       if (admin_mode == "average") {
-        if (any(factor_covs)) {
-          # if there are any factors, get mode of polygon
-          sub_batch_covs_values[!points, factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                      load_stack(sub_batch_covs[which(factor_covs)]),
-                                                                      admin, fun = 'modal')
+        # Gets the mean or mode value of the covariates zone 
+        discrete_covs <- names(sub_batch_factor)[sub_batch_factor == TRUE]
+        if (length(discrete_covs) != 0) {
+          # if there are any factors, get mode of polygon. `modal` on can only cope with one covariate at a time
+          for(cov in discrete_covs) {
+            sub_batch_covs_values[!points, cov] <- extractAdmin(sub_batch[!points, ],
+                                                                load_stack(sub_batch_covs[cov]),
+                                                                admin, fun = 'modal')
+          }
         }
-        if (any(!factor_covs)) {
+        continous_covs <- names(sub_batch_factor)[sub_batch_factor == FALSE]
+        if (length(continous_covs) != 0) {
           # if there are any continuous, get mean of polygon
-          sub_batch_covs_values[!points, !factor_covs] <- extractAdmin(sub_batch[!points, ],
-                                                                       load_stack(sub_batch_covs[which(!factor_covs)]),
-                                                                       admin, fun = 'mean')
+          sub_batch_covs_values[!points, continous_covs] <- extractAdmin(sub_batch[!points, ],
+                                                                         load_stack(sub_batch_covs[continous_covs]),
+                                                                         admin, fun = 'mean')
         }
       } else if (admin_mode == "random") {
-        # Freya's "Random pixel" stuff here?
+        # Gets a random value from the covariates GAUL zone 
+        
+        # Get non-precise levels and the uniq gauls for those levels
+        admin_data <- sub_batch[!points, ]
+        sub_batch_zones <- findZones(admin_data)
+        
+        # create a vector to hold cell numbers
+        admin_cells <- vector(length = length(admin_data), mode = "integer")
+        
+        for (level in names(sub_batch_zones)) {
+          for (gaul in sub_batch_zones[[level]]) {
+            # find the points we are extracting for this zone
+            target_records <- admin_data$Admin == level & admin_data$GAUL == gaul
+            
+            # find the cell positions for this zone
+            # pick a random set of the zone cells
+            admin_cells[target_records] <- sample(zones[[as.character(level)]][[as.character(gaul)]], sum(target_records), replace=TRUE)
+          }
+        }
+        
+        # extract the cell values
+        sub_batch_covs_values[!points, ] <- load_stack(sub_batch_covs)[admin_cells]
       } else if (admin_mode == "latlong") {
+        # Get the value from the covariates for the lat/long (centroid)
         sub_batch_covs_values[!points, ] <- extract(load_stack(sub_batch_covs), sub_batch[!points, ])
       } else {
         stop(simpleError("Unknown mode for admin covariate value extraction", call = NULL))
@@ -994,57 +1037,91 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     return (sub_batch_covs_values)
   }
   
-  extractTemporalValues <- function (batch_covs_values, cov_class_value, date_format, timestep_size) {
+  extractTemporalValues <- function (timestep_size, batch, covariates, cov_class, factor, zones) {
     # Perform time aware covariate extraction
+    date_format <- list('day'="%Y-%m-%d", 'month'="%Y-%m", 'year'="%Y")[[timestep_size]]
     
-    pickTemporalCovariate <- function (temporal_covariates, time=NA) {
-      # Select the appropriate sub-file of each covariate for a given timestep
-      suitable_covs <- temporal_covariates[which(names(temporal_covariates) <= time)]
-      if (length(suitable_covs) == 0) {
-        return (temporal_covariates[[min(names(temporal_covariates))]])
-      } else {
-        return (temporal_covariates[[max(names(suitable_covs))]])
-      }
-    }
-    
-    if (any(cov_class == cov_class_value)) {
-      relevant_covs_idx <- which(cov_class == cov_class_value)
-      covariate_of_interest <- covariates[relevant_covs_idx]
-      covariate_of_interest_factor <- factor[relevant_covs_idx]
-      time_min <- as.Date(cut(min(batch$Date), timestep_size))
-      time_max <- as.Date(cut(max(batch$Date), timestep_size))
-      timesteps <- seq(time_min, time_max, by=timestep_size)
-      for (i in seq_along(timesteps)) {
-        timestep <- format(timesteps[i], date_format)
-        subset <- format(batch$Date, date_format) == timestep
-        if (any(subset)) {
-          # Pick the covariate subfiles for this timestep
-          covariates_for_timestep <- lapply(covariate_of_interest, pickTemporalCovariate, time=timestep)
-          # Extract the values
-          batch_covs_values[subset, relevant_covs_idx] <- extractSubBatch(batch[subset, ], covariates_for_timestep, covariate_of_interest_factor)
+    pickCovariateLayerForTimestep <- function (layers, time=NA) {
+      if (is.list(layers)) {
+        # Select the appropriate sub-file of each covariate for a given timestep
+        suitable_layers <- layers[which(names(layers) <= time)]
+        if (length(suitable_layers) == 0) {
+          return (layers[[min(names(layers))]])
+        } else {
+          return (layers[[max(names(suitable_layers))]])
         }
+      } else {
+        # This is single layer cov, just return it
+        return (layers)
       }
     }
+    
+    ## Create an empty matrix for the extracted covariate records
+    batch_covs_values <- matrix(NA, nrow = nrow(batch), ncol = length(covariates))
+    colnames(batch_covs_values) <- names(covariates)
+    
+    time_min <- as.Date(cut(min(batch$Date), timestep_size))
+    time_max <- as.Date(cut(max(batch$Date), timestep_size))
+    timesteps <- seq(time_min, time_max, by=timestep_size)
+    
+    ## Build up a working set (the union of timesteps which use identical covariates), until the covariates change
+    ## This is to minimize the number of extractSubBatch calls
+    covariates_for_working_set <- NA
+    points_for_working_set <- c()
+    
+    for (i in seq_along(timesteps)) {
+      timestep <- format(timesteps[i], date_format)
+      points_for_timestep <- format(batch$Date, date_format) == timestep
+      if (any(points_for_timestep)) {
+        # Pick the covariate subfiles for this timestep
+        covariates_for_timestep <- lapply(covariates, pickCovariateLayerForTimestep, time=timestep)
+        
+        if (anyNA(covariates_for_working_set)) {
+          # Null protection
+          covariates_for_working_set <- covariates_for_timestep
+        }
+        
+        if (identical(covariates_for_timestep, covariates_for_working_set)) {
+          # Extract the values for working set
+          batch_covs_values[points_for_working_set, ] <- extractSubBatch(batch[points_for_working_set, ], covariates_for_working_set, factor, zones)
+          
+          # Reset the working set
+          covariates_for_last_timestep <- covariates_for_timestep
+          points_for_working_set <- c()
+        }
+        
+        # Add this timesteps occurrences to the working set
+        points_for_working_set <- append(points_for_working_set, which(points_for_timestep))
+      }
+    }
+    
+    if (!anyNA(covariates_for_working_set)) {
+      # Make sure the final working set gets extracted
+      batch_covs_values[points_for_working_set, ] <- extractSubBatch(batch[points_for_working_set, ], covariates_for_working_set, factor, zones)
+    }
+    
     return(batch_covs_values)
   }
   
   ## Classify the covariates
   cov_class <- classifyCovaraites(covariates)  
   
-  ## Create an empty matrix for the extracted covariate records
-  batch_covs_values <- matrix(NA, nrow = nrow(batch), ncol = length(covariates))
-  colnames(batch_covs_values) <- names(covariates)
-  
-  ## Handle non-temporal covariates
-  if (any(cov_class == "s")) {
-    relevant_covs_idx <- which(cov_class == "s")
-    batch_covs_values[, relevant_covs_idx] <- extractSubBatch(batch, covariates[relevant_covs_idx], factor[relevant_covs_idx])
+  ## Find zones (if required)
+  zones <- list()
+  if (admin_mode == "random") {
+    zones <- findZonePixels(findZones(batch), admin)
   }
   
-  ## Handle temporal covariates
-  batch_covs_values <- extractTemporalValues(batch_covs_values, "y", "%Y", "year")
-  batch_covs_values <- extractTemporalValues(batch_covs_values, "m", "%Y-%m", "month") 
-  batch_covs_values <- extractTemporalValues(batch_covs_values, "d", "%Y-%m-%d", "day") 
+  ## Extract in stages using the most precise timesteps nessesary
+  if (any(cov_class == "d")) {  
+    batch_covs_values <- extractTemporalValues("day", batch, covariates, cov_class, factor, zones) 
+  } else if (any(cov_class == "m")) {
+    batch_covs_values <- extractTemporalValues("month", batch, covariates, cov_class, factor, zones)   
+  } else if (any(cov_class == "y")) {
+    batch_covs_values <- extractTemporalValues("year", batch, covariates, cov_class, factor, zones)  
+  } else {
+    batch_covs_values <- extractSubBatch(batch, covariates, factor, zones)
+  }
   
   # build output data structure
   results <- cbind(PA = batch$PA,
@@ -1068,7 +1145,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
 selectLatestCovariates <- function(covariates, load_stack=stack) {
   ## For a mixed set of temporal and non-temporal raster paths, build a stack containing the most recent covariate sub-file for each covariate
   selected_covariates <- lapply(covariates, function (cov) {
-    if (typeof(cov) == "list") {
+    if (is.list(cov)) {
       return (cov[[max(names(cov))]])
     } else {
       return (cov)
@@ -1881,7 +1958,7 @@ abraidBhatt <- function (pars,
   }
   
   # extract covariates 
-  return (extractBatch(all, covariates, factor, admin, admin_mode="average", load_stack=load_stack))
+  return (extractBatch(all, covariates, factor, admin, admin_mode="random", load_stack=load_stack))
 }
 
 biasGrid <- function(polygons, raster, sigma = 30)
@@ -2244,9 +2321,7 @@ runABRAID <- function (mode,
                        occurrence_path,
                        extent_path,
                        supplementary_occurrence_path,
-                       admin0_path,
-                       admin1_path,
-                       admin2_path,
+                       admin_path,
                        covariate_path,
                        discrete,
                        verbose = TRUE,
@@ -2380,11 +2455,7 @@ runABRAID <- function (mode,
   # Note the horrible hack of specifying admin 3 as the provided admin 1.
   # These should be ignored since ABRAID should never contain anything other
   # than levels 0, 1 and 2
-  admin <- abraidStack(list(
-    "0"=admin0_path,
-    "1"=admin1_path,
-    "2"=admin2_path,
-    "3"=admin1_path))
+  admin <- abraidStack(admin_path)
 
   # get the required number of cpus
   nboot <- 64
@@ -2464,7 +2535,8 @@ runABRAID <- function (mode,
              extractBatch,
              covariates = covariate_path,
              admin = admin, 
-             factor = discrete)
+             factor = discrete,
+             admin_mode="random")
   } else {
     exit(1)
   }

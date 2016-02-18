@@ -1037,63 +1037,91 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
     return (sub_batch_covs_values)
   }
   
-  extractTemporalValues <- function (batch_covs_values, cov_class_value, date_format, timestep_size) {
+  extractTemporalValues <- function (timestep_size, batch, covariates, cov_class, factor, zones) {
     # Perform time aware covariate extraction
+    date_format <- list('day'="%Y-%m-%d", 'month'="%Y-%m", 'year'="%Y")[[timestep_size]]
     
-    pickTemporalCovariate <- function (temporal_covariates, time=NA) {
-      # Select the appropriate sub-file of each covariate for a given timestep
-      suitable_covs <- temporal_covariates[which(names(temporal_covariates) <= time)]
-      if (length(suitable_covs) == 0) {
-        return (temporal_covariates[[min(names(temporal_covariates))]])
-      } else {
-        return (temporal_covariates[[max(names(suitable_covs))]])
-      }
-    }
-    
-    if (any(cov_class == cov_class_value)) {
-      relevant_covs_idx <- which(cov_class == cov_class_value)
-      covariate_of_interest <- covariates[relevant_covs_idx]
-      covariate_of_interest_factor <- factor[relevant_covs_idx]
-      time_min <- as.Date(cut(min(batch$Date), timestep_size))
-      time_max <- as.Date(cut(max(batch$Date), timestep_size))
-      timesteps <- seq(time_min, time_max, by=timestep_size)
-      for (i in seq_along(timesteps)) {
-        timestep <- format(timesteps[i], date_format)
-        subset <- format(batch$Date, date_format) == timestep
-        if (any(subset)) {
-          # Pick the covariate subfiles for this timestep
-          covariates_for_timestep <- lapply(covariate_of_interest, pickTemporalCovariate, time=timestep)
-          # Extract the values
-          batch_covs_values[subset, relevant_covs_idx] <- extractSubBatch(batch[subset, ], covariates_for_timestep, covariate_of_interest_factor, zones)
+    pickCovariateLayerForTimestep <- function (layers, time=NA) {
+      if (is.list(layers)) {
+        # Select the appropriate sub-file of each covariate for a given timestep
+        suitable_layers <- layers[which(names(layers) <= time)]
+        if (length(suitable_layers) == 0) {
+          return (layers[[min(names(layers))]])
+        } else {
+          return (layers[[max(names(suitable_layers))]])
         }
+      } else {
+        # This is single layer cov, just return it
+        return (layers)
       }
     }
+    
+    ## Create an empty matrix for the extracted covariate records
+    batch_covs_values <- matrix(NA, nrow = nrow(batch), ncol = length(covariates))
+    colnames(batch_covs_values) <- names(covariates)
+    
+    time_min <- as.Date(cut(min(batch$Date), timestep_size))
+    time_max <- as.Date(cut(max(batch$Date), timestep_size))
+    timesteps <- seq(time_min, time_max, by=timestep_size)
+    
+    ## Build up a working set (the union of timesteps which use identical covariates), until the covariates change
+    ## This is to minimize the number of extractSubBatch calls
+    covariates_for_working_set <- NA
+    points_for_working_set <- c()
+    
+    for (i in seq_along(timesteps)) {
+      timestep <- format(timesteps[i], date_format)
+      points_for_timestep <- format(batch$Date, date_format) == timestep
+      if (any(points_for_timestep)) {
+        # Pick the covariate subfiles for this timestep
+        covariates_for_timestep <- lapply(covariates, pickCovariateLayerForTimestep, time=timestep)
+        
+        if (anyNA(covariates_for_working_set)) {
+          # Null protection
+          covariates_for_working_set <- covariates_for_timestep
+        }
+        
+        if (any(unlist(covariates_for_timestep) != unlist(covariates_for_working_set)) ) {
+          # Extract the values for working set
+          batch_covs_values[points_for_working_set, ] <- extractSubBatch(batch[points_for_working_set, ], covariates_for_working_set, factor, zones)
+          
+          # Reset the working set
+          covariates_for_last_timestep <- covariates_for_timestep
+          points_for_working_set <- c()
+        }
+        
+        # Add this timesteps occurrences to the working set
+        points_for_working_set <- append(points_for_working_set, which(points_for_timestep))
+      }
+    }
+    
+    if (!anyNA(covariates_for_working_set)) {
+      # Make sure the final working set gets extracted
+      batch_covs_values[points_for_working_set, ] <- extractSubBatch(batch[points_for_working_set, ], covariates_for_working_set, factor, zones)
+    }
+    
     return(batch_covs_values)
   }
   
   ## Classify the covariates
   cov_class <- classifyCovaraites(covariates)  
   
-  ## Create an empty matrix for the extracted covariate records
-  batch_covs_values <- matrix(NA, nrow = nrow(batch), ncol = length(covariates))
-  colnames(batch_covs_values) <- names(covariates)
-
   ## Find zones (if required)
   zones <- list()
   if (admin_mode == "random") {
     zones <- findZonePixels(findZones(batch), admin)
   }
   
-  ## Handle non-temporal covariates
-  if (any(cov_class == "s")) {
-    relevant_covs_idx <- which(cov_class == "s")
-    batch_covs_values[, relevant_covs_idx] <- extractSubBatch(batch, covariates[relevant_covs_idx], factor[relevant_covs_idx], zones)
+  ## Extract in stages using the most precise timesteps nessesary
+  if (any(cov_class == "d")) {  
+    batch_covs_values <- extractTemporalValues("day", batch, covariates, cov_class, factor, zones) 
+  } else if (any(cov_class == "m")) {
+    batch_covs_values <- extractTemporalValues("month", batch, covariates, cov_class, factor, zones)   
+  } else if (any(cov_class == "y")) {
+    batch_covs_values <- extractTemporalValues("year", batch, covariates, cov_class, factor, zones)  
+  } else {
+    batch_covs_values <- extractSubBatch(batch, covariates, factor, zones)
   }
-  
-  ## Handle temporal covariates
-  batch_covs_values <- extractTemporalValues(batch_covs_values, "y", "%Y", "year")
-  batch_covs_values <- extractTemporalValues(batch_covs_values, "m", "%Y-%m", "month") 
-  batch_covs_values <- extractTemporalValues(batch_covs_values, "d", "%Y-%m-%d", "day") 
   
   # build output data structure
   results <- cbind(PA = batch$PA,

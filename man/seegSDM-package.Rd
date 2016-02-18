@@ -13,8 +13,8 @@ This will be developed to incorporate other statistical models, methods for sele
 \tabular{ll}{
 Package: \tab seegSDM\cr
 Type: \tab Package\cr
-Version: \tab 0.1-5\cr
-Date: \tab 2014-02-26\cr
+Version: \tab 0.1-8\cr
+Date: \tab 2016-02-19\cr
 License: \tab GPL(>=2)\cr
 }
 Functions are provided to assist with the seeg SDM workflow:

@@ -15,9 +15,7 @@ runABRAID(mode,
           occurrence_path,
           extent_path,
           supplementary_occurrence_path,
-          admin0_path,
-          admin1_path,
-          admin2_path,
+          admin_path,
           covariate_path,
           discrete,
           verbose = TRUE,
@@ -42,14 +40,8 @@ runABRAID(mode,
   \item{supplementary_occurrence_path}{
     A character vector of length one specifying the file path of a csv file containing occurrence data for other diseases. This file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points), 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
   }
-  \item{admin0_path}{
-    A character vector of length one specifying the file path of a GeoTiff raster file giving the GAUL codes for administrative regions at level one.
-  }
-  \item{admin1_path}{
-    A character vector of length one specifying the file path of a GeoTiff raster file giving the GAUL codes for administrative regions at level one.
-  }
-  \item{admin2_path}{
-    A character vector of length one specifying the file path of a GeoTiff raster file giving the GAUL codes for administrative regions at level two.
+  \item{admin_path}{
+    A named list representing locations of a set of GeoTiff raster file giving the GAUL codes for administrative regions at various levels. The names in the list should take the form "admin0" "admin1" etc. The values should be the file path for the various rasters.
   }
   \item{covariate_path}{
     A character vector specifying the file paths of GeoTiff raster files giving the environmetnal covariates used to predict risk of the disease.

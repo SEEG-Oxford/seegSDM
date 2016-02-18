@@ -1081,7 +1081,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="average",
           covariates_for_working_set <- covariates_for_timestep
         }
         
-        if (any(unlist(covariates_for_timestep) != unlist(covariates_for_working_set)) ) {
+        if (identical(covariates_for_timestep, covariates_for_working_set)) {
           # Extract the values for working set
           batch_covs_values[points_for_working_set, ] <- extractSubBatch(batch[points_for_working_set, ], covariates_for_working_set, factor, zones)
           
@@ -2321,9 +2321,7 @@ runABRAID <- function (mode,
                        occurrence_path,
                        extent_path,
                        supplementary_occurrence_path,
-                       admin0_path,
-                       admin1_path,
-                       admin2_path,
+                       admin_path,
                        covariate_path,
                        discrete,
                        verbose = TRUE,
@@ -2457,11 +2455,7 @@ runABRAID <- function (mode,
   # Note the horrible hack of specifying admin 3 as the provided admin 1.
   # These should be ignored since ABRAID should never contain anything other
   # than levels 0, 1 and 2
-  admin <- abraidStack(list(
-    "0"=admin0_path,
-    "1"=admin1_path,
-    "2"=admin2_path,
-    "3"=admin1_path))
+  admin <- abraidStack(admin_path)
 
   # get the required number of cpus
   nboot <- 64

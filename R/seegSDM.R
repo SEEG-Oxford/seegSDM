@@ -879,7 +879,7 @@ extractAdmin <- function (occurrence, covariates, admin, fun = 'mean') {
   
 }
 
-extractBatch <- function(batch, covariates, factor, admin, admin_mode="average", load_stack=stack) {
+extractBatch <- function(batch, covariates, factor, admin, admin_mode="random", load_stack=stack) {
   ## Extract a batch of occurrence data
   ## Takes account of synoptic or temporally resolved covariates, as well as, point and admin data
   ## The "PA" and "Weight" columns (+ Lat/Long) of the input data are retained in the output
@@ -1906,6 +1906,7 @@ abraidBhatt <- function (pars,
                          consensus,
                          admin,
                          factor,
+                         admin_mode="random",
                          load_stack=stack) {
   # A clone of 'extractBhatt' for use in abraid. 
   # It behaves the same as extractBhatt, but requires a named list or nested named list of covariates, to perform time aware extraction
@@ -1958,7 +1959,7 @@ abraidBhatt <- function (pars,
   }
   
   # extract covariates 
-  return (extractBatch(all, covariates, factor, admin, admin_mode="random", load_stack=load_stack))
+  return (extractBatch(all, covariates, factor, admin, admin_mode=admin_mode, load_stack=load_stack))
 }
 
 biasGrid <- function(polygons, raster, sigma = 30)
@@ -2511,6 +2512,7 @@ runABRAID <- function (mode,
                           consensus = extent,
                           admin = admin, 
                           factor = discrete,
+                          admin_mode="random",
                           load_stack = abraidStack)
     if (verbose) {
       cat('extractBhatt done\n\n')

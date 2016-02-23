@@ -1076,7 +1076,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="random", 
         # Pick the covariate subfiles for this timestep
         covariates_for_timestep <- lapply(covariates, pickCovariateLayerForTimestep, time=timestep)
         
-        if (anyNA(covariates_for_working_set)) {
+        if (any(is.na(covariates_for_working_set))) {
           # Null protection
           covariates_for_working_set <- covariates_for_timestep
         }
@@ -1095,7 +1095,7 @@ extractBatch <- function(batch, covariates, factor, admin, admin_mode="random", 
       }
     }
     
-    if (!anyNA(covariates_for_working_set)) {
+    if (!any(is.na(covariates_for_working_set))) {
       # Make sure the final working set gets extracted
       batch_covs_values[points_for_working_set, ] <- extractSubBatch(batch[points_for_working_set, ], covariates_for_working_set, factor, zones)
     }

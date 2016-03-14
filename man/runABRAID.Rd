@@ -26,7 +26,7 @@ runABRAID(mode,
 
 \arguments{
   \item{mode}{
-    A character vector of length one specifying type of model to be performed. E.g. 'bhatt' to use the BRT ensemble approach from the Bhatt \emph{et al.} (2013) dengue mapping paper. Supported modes can be found in 'data/abraid_modes.txt'.
+    A character vector of length one specifying type of model to be performed. E.g. 'Bhatt2013' to use the BRT ensemble approach from the Bhatt \emph{et al.} (2013) dengue mapping paper. Supported modes can be found in 'data/abraid_modes.txt'.
   }
   \item{disease}{
     A numeric identifer for the disease being modelled.

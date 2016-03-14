@@ -2457,7 +2457,7 @@ runABRAID <- function (mode,
   }
   
   # prepare absence data
-  if (mode == 'bhatt') {
+  if (mode == 'Bhatt2013') {
     sub <- function(i, pars) {
       # get the $i^{th}$ row of pars 
       pars[i, ]
@@ -2499,7 +2499,7 @@ runABRAID <- function (mode,
     if (verbose) {
       cat('extractBhatt done\n\n')
     }
-  } else if (mode == "all_bias") {
+  } else if (mode == "Shearer2016") {
     stopifnot(class(sample_bias_path) == 'character' &&
                 file.exists(supplementary_occurrence_path))
     # sample bias data

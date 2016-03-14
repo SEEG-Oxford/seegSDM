@@ -2372,15 +2372,10 @@ runABRAID <- function (mode,
               file.exists(extent_path) && 
               compareCRS(raster(extent_path), abraidCRS))
     
-  stopifnot(file.exists(admin0_path) && 
-              compareCRS(raster(admin0_path), abraidCRS))
-  
-  stopifnot(file.exists(admin1_path) && 
-              compareCRS(raster(admin1_path), abraidCRS))
-  
-  stopifnot(file.exists(admin2_path) && 
-              compareCRS(raster(admin2_path), abraidCRS))
-  
+  stopifnot(class(unlist(admin_path, recursive=TRUE)) == 'character' &&
+              all(file.exists(unlist(admin_path, recursive=TRUE))) &&
+              all(sapply(sapply(unlist(admin_path, recursive=TRUE), raster), compareCRS, abraidCRS)))
+
   stopifnot(class(verbose) == 'logical')
   
   stopifnot(class(unlist(discrete)) == 'logical' &&

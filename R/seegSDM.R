@@ -2494,7 +2494,7 @@ runABRAID <- function (mode,
                           consensus = extent,
                           admin = admin, 
                           factor = discrete,
-                          admin_mode="random",
+                          admin_mode="average",
                           load_stack = abraidStack)
     if (verbose) {
       cat('extractBhatt done\n\n')

@@ -2321,7 +2321,7 @@ runABRAID <- function (mode,
                        disease,
                        occurrence_path,
                        extent_path,
-                       supplementary_occurrence_path,
+                       sample_bias_path,
                        admin_path,
                        covariate_path,
                        discrete,
@@ -2372,9 +2372,6 @@ runABRAID <- function (mode,
               file.exists(extent_path) && 
               compareCRS(raster(extent_path), abraidCRS))
     
-  stopifnot(class(supplementary_occurrence_path) == 'character' &&
-              file.exists(supplementary_occurrence_path))
-
   stopifnot(file.exists(admin0_path) && 
               compareCRS(raster(admin0_path), abraidCRS))
   
@@ -2418,18 +2415,7 @@ runABRAID <- function (mode,
   # convert it to a SpatialPointsDataFrame
   # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
   occurrence <- occurrence2SPDF(occurrence, crs=abraidCRS)
-  
-  # occurrence data
-  supplementary_occurrence <- read.csv(supplementary_occurrence_path,
-                         stringsAsFactors = FALSE)
-  
-  # check column names are as expected
-  stopifnot(sort(colnames(supplementary_occurrence)) == sort(c('Admin',
-                                                          'Date',    
-                                                          'Disease',
-                                                          'GAUL',
-                                                          'Latitude',
-                                                          'Longitude')))
+
   # Functions to assist in the loading of raster data. 
   # This works around the truncation of crs metadata in writen geotiffs.
   abraidStack <- function(paths) {
@@ -2444,10 +2430,6 @@ runABRAID <- function (mode,
     extent(r) <- extent(-180, 180, -60, 85)
     return (r)
   }
-  
-  # convert it to a SpatialPointsDataFrame
-  # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
-  supplementary_occurrence <- occurrence2SPDF(supplementary_occurrence, crs=abraidCRS)
   
   # load the definitve extent raster
   extent <- abraidRaster(extent_path)
@@ -2518,6 +2500,24 @@ runABRAID <- function (mode,
       cat('extractBhatt done\n\n')
     }
   } else if (mode == "all_bias") {
+    stopifnot(class(sample_bias_path) == 'character' &&
+                file.exists(supplementary_occurrence_path))
+    # occurrence data
+    sample_bias <- read.csv(sample_bias_path,
+                                         stringsAsFactors = FALSE)
+    
+    # check column names are as expected
+    stopifnot(sort(colnames(sample_bias)) == sort(c('Admin',
+                                                    'Date',    
+                                                    'Disease',
+                                                    'GAUL',
+                                                    'Latitude',
+                                                    'Longitude')))
+    # convert it to a SpatialPointsDataFrame
+    # NOTE: `occurrence` *must* contain columns named 'Latitude' and 'Longitude'
+    sample_bias <- occurrence2SPDF(sample_bias, crs=abraidCRS)
+    
+    # merge data sets
     presence <- occurrence
     presence <- occurrence2SPDF(cbind(PA=1, presence@data), crs=abraidCRS)
     absence <- supplementary_occurrence

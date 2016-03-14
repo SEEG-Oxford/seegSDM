@@ -2502,7 +2502,9 @@ runABRAID <- function (mode,
   } else if (mode == "all_bias") {
     stopifnot(class(sample_bias_path) == 'character' &&
                 file.exists(supplementary_occurrence_path))
-    # occurrence data
+    # sample bias data
+    # NOTE: this will have been filtered to be within the disease extent, and 
+    #       possibly have the same agent type by the wider ABRAID platform
     sample_bias <- read.csv(sample_bias_path,
                                          stringsAsFactors = FALSE)
     

@@ -2333,7 +2333,7 @@ runABRAID <- function (mode,
   # Given the locations of: a csv file containing disease occurrence data
   # (`occurrence_path`, a character), a GeoTIFF raster giving the definitive
   # extents of the disease (`extent_path`, a character), a csv file containing 
-  # disease occurrence data for other diseases (`supplementary_occurrence_path`,
+  # disease occurrence data for other diseases (`sample_bias_path`,
   # a character), GeoTIFF rasters giving standardised admin units (`admin0_path`,
   # `admin1_path`, `admin2_path`) and GeoTIFF rasters giving the covariates to
   # use (`covariate_path`,  a character vector). Run a predictive model to produce
@@ -2344,7 +2344,7 @@ runABRAID <- function (mode,
   # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points),
   # 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
   # NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
-  # The file given by `supplementary_occurrence_path` must contain the columns 
+  # The file given by `sample_bias_path` must contain the columns 
   # 'Longitude', 'Latitude' (giving the coordinates of points), 'Admin' (giving the
   # admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points),
   # 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or
@@ -2372,15 +2372,10 @@ runABRAID <- function (mode,
               file.exists(extent_path) && 
               compareCRS(raster(extent_path), abraidCRS))
     
-  stopifnot(file.exists(admin0_path) && 
-              compareCRS(raster(admin0_path), abraidCRS))
-  
-  stopifnot(file.exists(admin1_path) && 
-              compareCRS(raster(admin1_path), abraidCRS))
-  
-  stopifnot(file.exists(admin2_path) && 
-              compareCRS(raster(admin2_path), abraidCRS))
-  
+  stopifnot(class(unlist(admin_path, recursive=TRUE)) == 'character' &&
+              all(file.exists(unlist(admin_path, recursive=TRUE))) &&
+              all(sapply(sapply(unlist(admin_path, recursive=TRUE), raster), compareCRS, abraidCRS)))
+
   stopifnot(class(verbose) == 'logical')
   
   stopifnot(class(unlist(discrete)) == 'logical' &&
@@ -2501,7 +2496,7 @@ runABRAID <- function (mode,
     }
   } else if (mode == "Shearer2016") {
     stopifnot(class(sample_bias_path) == 'character' &&
-                file.exists(supplementary_occurrence_path))
+                file.exists(sample_bias_path))
     # sample bias data
     # NOTE: this will have been filtered to be within the disease extent, and 
     #       possibly have the same agent type by the wider ABRAID platform
@@ -2522,7 +2517,7 @@ runABRAID <- function (mode,
     # merge data sets
     presence <- occurrence
     presence <- occurrence2SPDF(cbind(PA=1, presence@data), crs=abraidCRS)
-    absence <- supplementary_occurrence
+    absence <- sample_bias
     absence <- occurrence2SPDF(cbind(PA=0, absence@data[, 1:2], Weight=1, absence@data[, 3:6]), crs=abraidCRS)
     all <- rbind(presence, absence)
     

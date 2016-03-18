@@ -14,7 +14,7 @@ runABRAID(mode,
           disease,
           occurrence_path,
           extent_path,
-          supplementary_occurrence_path,
+          sample_bias_path,
           admin_path,
           covariate_path,
           discrete,
@@ -26,7 +26,7 @@ runABRAID(mode,
 
 \arguments{
   \item{mode}{
-    A character vector of length one specifying type of model to be performed. E.g. 'bhatt' to use the BRT ensemble approach from the Bhatt \emph{et al.} (2013) dengue mapping paper. Supported modes can be found in 'data/abraid_modes.txt'.
+    A character vector of length one specifying type of model to be performed. E.g. 'Bhatt2013' to use the BRT ensemble approach from the Bhatt \emph{et al.} (2013) dengue mapping paper. Supported modes can be found in 'data/abraid_modes.txt'.
   }
   \item{disease}{
     A numeric identifer for the disease being modelled.
@@ -37,7 +37,7 @@ runABRAID(mode,
   \item{extent_path}{
     A character vector of length one specifying the file path of a GeoTiff raster file giving the definitive extents of the disease.
   }
-  \item{supplementary_occurrence_path}{
+  \item{sample_bias_path}{
     A character vector of length one specifying the file path of a csv file containing occurrence data for other diseases. This file must contain the columns: 'Longitude', 'Latitude' (giving the coordinates of points), 'Admin' (giving the admin level of the record - e.g. 1, 2 or 3 for polygons or -999 for points), 'GAUL' (the GAUL code corresponding to the admin unit for polygons, or NA for points) and 'Disease' a numeric identifer for the disease of the occurrence.
   }
   \item{admin_path}{
